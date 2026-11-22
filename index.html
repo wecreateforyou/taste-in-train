@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="google-site-verification" content="iMSCVjbMmo3nqHkWz81thriy9dY6uZD0qxbZwqBcZVE" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Taste in Train</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--red:#d62828;--red-d:#a81c1c;--orange:#f77f00;--cream:#fff7ec;--ink:#2b1d16;--mute:#7a6a60;--card:#fff;--line:#f0e3d3;--green:#2a9d4a;--r:18px;--sh:0 6px 22px rgba(80,35,10,.10)}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -20,6 +20,9 @@ label{display:block;font-size:.82rem;font-weight:600;margin:12px 0 5px;color:var
 .btn-sm{padding:8px 14px;font-size:.85rem}
 .btn:disabled{background:#ddd;color:#999;border-color:#ddd;cursor:not-allowed}
 .btn-block{width:100%}
+.loading{min-height:100vh;display:grid;place-items:center;text-align:center;color:var(--mute);font-weight:600}
+.spin{width:42px;height:42px;border-radius:50%;border:5px solid var(--line);border-top-color:var(--red);animation:sp 1s linear infinite;margin:0 auto 12px}
+@keyframes sp{to{transform:rotate(360deg)}}
 /* header */
 header{position:sticky;top:0;z-index:50;background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.08)}
 .hbar{display:flex;align-items:center;gap:14px;padding:10px 22px;max-width:1300px;margin:auto;flex-wrap:wrap}
@@ -102,7 +105,7 @@ footer a{color:var(--orange);cursor:pointer}
 .empty{text-align:center;color:var(--mute);padding:50px 0}
 .pay label{display:flex;align-items:center;gap:8px;font-size:.95rem;color:var(--ink);font-weight:500;margin:6px 0}
 .pay input{width:auto}
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(90px);background:#2b1d16;color:#fff;padding:12px 22px;border-radius:999px;z-index:200;transition:.3s;font-weight:600}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(90px);background:#2b1d16;color:#fff;padding:12px 22px;border-radius:999px;z-index:200;transition:.3s;font-weight:600;max-width:92vw;text-align:center}
 #toast.show{transform:translateX(-50%)}
 .shade{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:80;display:none}.shade.show{display:block}
 /* admin */
@@ -127,100 +130,128 @@ td .th img{width:100%;height:100%;object-fit:cover}
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="app"><div class="loading"><div><div class="spin"></div>Loading menu...</div></div></div>
 <div id="ov"></div>
 <div class="shade" id="shade" onclick="toggleCart(false)"></div>
 <div id="drawer"></div>
 <div id="toast"></div>
 
 <script>
-/* ============ DATA LAYER (browser localStorage acts as the database) ============ */
+/* ============ CONFIG: your Supabase project (these two values are public by design) ============ */
+const SUPABASE_URL = 'https://iehadbsdatrjcrkaovje.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_rZknXCXJ8AYN-U6TMc45fQ_iAwNYuPu';
+
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = n => 'Rs. ' + Math.round(n).toLocaleString('en-PK');
-const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+const rid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 
-const DEFAULT_DB = {
-  settings:{brand:'Taste in Train',tagline:'Fresh, hot and delivered at the speed of a train.',logo:'',hero:'',tax:16,delivery:150,freeAbove:3000,adminUser:'admin',adminPass:'admin123',
-    cities:['Peshawar','Lahore','Karachi','Islamabad','Rawalpindi','Faisalabad','Multan','Quetta','Hyderabad','Sialkot','Gujranwala','Abbottabad','Mardan','Bahawalpur']},
-  categories:[
-    {id:'c1',name:'Italian',emoji:'🍕',img:''},{id:'c2',name:'Indian / Desi',emoji:'🍛',img:''},
-    {id:'c3',name:'Chinese',emoji:'🥡',img:''},{id:'c4',name:'Fast Food',emoji:'🍔',img:''},
-    {id:'c5',name:'Desserts',emoji:'🍰',img:''},{id:'c6',name:'Drinks',emoji:'🥤',img:''}],
-  items:[
-    ['c1','Margherita Pizza','Classic hand-stretched dough with tomato sauce, fresh mozzarella and basil. Serves 1-2 (10").',1300,'🍕',1],
-    ['c1','Pepperoni Pizza','Loaded with spicy pepperoni and double cheese on a crispy golden crust. Serves 1-2 (10").',1600,'🍕',1],
-    ['c1','Creamy Alfredo Pasta','Fettuccine tossed in a rich garlic parmesan cream sauce with grilled chicken.',1250,'🍝',1],
-    ['c1','Lasagna','Layers of pasta, beef ragu and béchamel baked with melted cheese.',1450,'🥘',0],
-    ['c2','Chicken Biryani','Aromatic basmati rice slow-cooked with tender chicken, spices and saffron. Served with raita.',650,'🍛',1],
-    ['c2','Butter Chicken','Smoky tandoori chicken in a velvety tomato-butter gravy. Best with naan.',1100,'🍗',1],
-    ['c2','Chicken Karahi','Wok-cooked chicken with tomatoes, green chilies and ginger. Serves 2-3.',1800,'🍲',1],
-    ['c2','Garlic Naan','Soft tandoor-baked bread brushed with garlic butter.',80,'🫓',1],
-    ['c3','Chicken Manchurian','Crispy chicken tossed in a tangy, savory Indo-Chinese sauce.',950,'🥡',1],
-    ['c3','Egg Fried Rice','Wok-fried rice with egg, spring onions and soy. Serves 1-2.',700,'🍚',1],
-    ['c3','Hot & Sour Soup','Peppery, tangy soup with chicken, mushrooms and bamboo shoots.',450,'🍜',0],
-    ['c3','Vegetable Spring Rolls','Six crunchy rolls stuffed with fresh vegetables, with chili dip.',500,'🥟',1],
-    ['c4','Zinger Burger','Crunchy spicy chicken fillet, lettuce and mayo in a toasted bun.',690,'🍔',1],
-    ['c4','Loaded Fries','Golden fries topped with cheese sauce, jalapeños and chicken bits.',560,'🍟',1],
-    ['c4','Club Sandwich','Triple-decker with grilled chicken, egg, cheese and fresh veggies.',720,'🥪',1],
-    ['c4','Chicken Nuggets (10 pcs)','Tender breaded nuggets served with garlic mayo and ketchup.',620,'🍗',1],
-    ['c5','Chocolate Lava Cake','Warm cake with a gooey molten chocolate center.',450,'🍫',1],
-    ['c5','New York Cheesecake','Creamy baked cheesecake on a buttery biscuit base.',550,'🍰',0],
-    ['c5','Kheer','Traditional rice pudding simmered with milk, cardamom and pistachios.',300,'🍮',1],
-    ['c5','Gulab Jamun (4 pcs)','Soft milk dumplings soaked in warm rose-cardamom syrup.',280,'🟤',1],
-    ['c6','Mint Margarita','Refreshing blend of fresh mint, lemon and soda.',280,'🥤',1],
-    ['c6','Mango Shake','Thick and creamy shake made with ripe mangoes.',350,'🥭',1],
-    ['c6','Masala Chai','Strong, spiced milk tea brewed the traditional way.',150,'☕',1],
-    ['c6','Soft Drink (500ml)','Chilled Pepsi, 7Up or Mirinda.',120,'🥫',1]
-  ].map(a=>({id:uid('i'),cat:a[0],name:a[1],desc:a[2],price:a[3],img:'',emoji:a[4],stock:!!a[5]})),
-  users:[], orders:[]
+/* Some preview windows pass network requests through postMessage, which cannot copy a Headers object
+   (DataCloneError). Turning the headers into a plain object first makes requests work everywhere. */
+const safeFetch = (input, init) => {
+  if(init && init.headers && !Array.isArray(init.headers) && typeof init.headers.forEach === 'function' && Object.getPrototypeOf(init.headers) !== Object.prototype){
+    const h = {}; init.headers.forEach((v, k) => { h[k] = v; }); init = {...init, headers: h};
+  }
+  return fetch(input, init);
 };
-let db = load('tit_db', null) || JSON.parse(JSON.stringify(DEFAULT_DB));
-let cart = load('tit_cart', []);
-let session = load('tit_session', null);
-let loc = load('tit_loc', null);
-let query = '', pending = null, adminTab = 'items', activeCat = null;
+let sb = null;
+try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {global: {fetch: safeFetch}}); } catch(e) { console.error(e); }
 
-function load(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
-function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){ toast('Storage full: use smaller images'); } }
-const saveDb = () => save('tit_db', db);
-const saveCart = () => save('tit_cart', cart);
+/* ============ STATE ============ */
+const DEFAULT_S = {brand:'Taste in Train',tagline:'Fresh, hot and delivered at the speed of a train.',logo:'',hero:'',tax:16,delivery:150,freeAbove:3000,
+  cities:['Peshawar','Lahore','Karachi','Islamabad','Rawalpindi','Faisalabad','Multan','Quetta','Hyderabad','Sialkot','Gujranwala','Abbottabad','Mardan','Bahawalpur']};
+let S = {...DEFAULT_S}, cats = [], items = [];
+let session = null, adminOk = null, orders = [], ordersSig = '', ordersLoaded = false;
+let cart = lsGet('tit_cart', []), loc = lsGet('tit_loc', null);
+let query = '', pending = null, adminTab = 'items', activeCat = null, ready = false;
+
+function lsGet(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
+function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+const saveCart = () => lsSet('tit_cart', cart);
+try{ localStorage.removeItem('tit_db'); localStorage.removeItem('tit_session'); sessionStorage.removeItem('tit_admin'); }catch(e){}
+
+const mapSession = s => s ? {id:s.user.id, email:s.user.email, name:(s.user.user_metadata && s.user.user_metadata.name) || (s.user.email || '').split('@')[0]} : null;
+
+/* ============ DATA ============ */
+async function loadData(){
+  const [s, c, i] = await Promise.all([
+    sb.from('settings').select('*').eq('id', 1).maybeSingle(),
+    sb.from('categories').select('*').order('sort'),
+    sb.from('items').select('*').order('sort')]);
+  const err = s.error || c.error || i.error; if(err) throw err;
+  if(s.data) S = {brand:s.data.brand, tagline:s.data.tagline || '', logo:s.data.logo || '', hero:s.data.hero || '', tax:Number(s.data.tax), delivery:Number(s.data.delivery),
+    freeAbove:Number(s.data.free_above), cities:Array.isArray(s.data.cities) && s.data.cities.length ? s.data.cities : DEFAULT_S.cities};
+  cats = c.data.map(x => ({id:x.id, name:x.name, emoji:x.emoji, img:x.img || '', sort:x.sort}));
+  items = i.data.map(x => ({id:x.id, cat:x.cat_id, name:x.name, desc:x.descr || '', price:Number(x.price), img:x.img || '', emoji:x.emoji, stock:x.stock, sort:x.sort}));
+}
+async function must(p){ const r = await p; if(r.error) throw r.error; return r.data; }
+async function mustRows(p){ const d = await must(p); if(!d || !d.length) throw new Error('Not allowed, or nothing was changed.'); return d; }
+function fail(e){ console.error(e); toast((e && e.message) || 'Something went wrong'); }
 
 /* ============ HELPERS ============ */
-function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); }
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2600); }
 function openModal(html, wide){ const o=$('#ov'); o.innerHTML=`<div class="modal ${wide?'wide':''}">${html}</div>`; o.classList.add('show'); }
 function closeModal(){ $('#ov').classList.remove('show'); $('#ov').innerHTML=''; }
-$('#ov').addEventListener('mousedown', e => { if(e.target.id==='ov' && (loc || isAdmin())) closeModal(); });
-const thumb = it => it.img ? `<img src="${it.img}" alt="${esc(it.name)}">` : esc(it.emoji || '🍽️');
-const getItem = id => db.items.find(i => i.id === id);
+$('#ov').addEventListener('mousedown', e => { if(e.target.id==='ov' && (loc || location.hash==='#admin')) closeModal(); });
+const thumb = it => it.img ? `<img src="${esc(it.img)}" alt="${esc(it.name)}">` : esc(it.emoji || '🍽️');
+const getItem = id => items.find(i => i.id === id);
 function totals(){
   const sub = cart.reduce((s,c)=>{ const it=getItem(c.id); return s + (it ? it.price*c.qty : 0); }, 0);
-  const tax = sub * db.settings.tax / 100;
-  const del = sub === 0 ? 0 : (db.settings.freeAbove > 0 && sub >= db.settings.freeAbove ? 0 : db.settings.delivery);
+  const tax = Math.round(sub * S.tax / 100);
+  const del = sub === 0 ? 0 : (S.freeAbove > 0 && sub >= S.freeAbove ? 0 : S.delivery);
   return {sub, tax, del, total: sub + tax + del, count: cart.reduce((s,c)=>s+c.qty,0)};
 }
-const isAdmin = () => sessionStorage.getItem('tit_admin') === '1';
-function fileToDataURL(file, cb){
-  const r = new FileReader();
-  r.onload = e => { const img = new Image(); img.onload = () => {
-    const max = 800, sc = Math.min(1, max/Math.max(img.width, img.height));
-    const c = document.createElement('canvas'); c.width = img.width*sc; c.height = img.height*sc;
-    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); cb(c.toDataURL('image/jpeg', .8)); };
-    img.src = e.target.result; };
-  r.readAsDataURL(file);
+function resizeToBlob(file, max){
+  return new Promise((res, rej) => {
+    const r = new FileReader(); r.onerror = () => rej(new Error('Could not read the file'));
+    r.onload = e => { const img = new Image(); img.onerror = () => rej(new Error('That is not a valid image'));
+      img.onload = () => { const sc = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas'); c.width = Math.round(img.width*sc); c.height = Math.round(img.height*sc);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(b => b ? res(b) : rej(new Error('Could not process the image')), 'image/jpeg', .85); };
+      img.src = e.target.result; };
+    r.readAsDataURL(file);
+  });
+}
+async function uploadImage(file){
+  const blob = await resizeToBlob(file, 1000), path = rid() + '.jpg';
+  const {error} = await sb.storage.from('images').upload(path, blob, {contentType:'image/jpeg', cacheControl:'31536000'});
+  if(error) throw error;
+  return sb.storage.from('images').getPublicUrl(path).data.publicUrl;
 }
 
-/* ============ ROUTER ============ */
-function route(){ document.title = db.settings.brand; location.hash === '#admin' ? renderAdmin() : renderSite(); }
-window.addEventListener('hashchange', () => { toggleCart(false); closeModal(); route(); });
+/* ============ STARTUP ============ */
+function showError(e){
+  const msg = (e && e.message) ? e.message : String(e);
+  $('#app').innerHTML = `<div class="loading"><div style="max-width:440px;padding:20px"><div style="font-size:3rem">⚠️</div><h2 style="color:var(--ink)">We could not load the menu</h2>
+    <p style="margin:10px 0">Check your internet connection. If you are the owner, make sure the database setup script was run in Supabase.</p>
+    <p style="font-size:.8rem;background:#fff;padding:10px;border-radius:10px;word-break:break-word">${esc(msg)}</p>
+    <button class="btn btn-red" style="margin-top:14px" onclick="location.reload()">Try again</button></div></div>`;
+}
+async function init(){
+  if(!sb) return showError(new Error('Could not load the Supabase library (check your internet connection).'));
+  try{ const {data} = await sb.auth.getSession(); session = mapSession(data.session); }catch(e){}
+  sb.auth.onAuthStateChange((ev, s) => {
+    session = mapSession(s);
+    if(ev === 'SIGNED_OUT') adminOk = null;
+    if(ev === 'PASSWORD_RECOVERY') setTimeout(openNewPassword, 0);
+  });
+  try{ await loadData(); }catch(e){ return showError(e); }
+  ready = true; route();
+}
+function route(){ document.title = S.brand; location.hash === '#admin' ? renderAdmin(true) : renderSite(); }
+window.addEventListener('hashchange', () => { if(!ready) return; toggleCart(false); closeModal(); route(); });
+document.addEventListener('visibilitychange', async () => {
+  if(document.hidden || !ready || location.hash === '#admin' || $('#ov').classList.contains('show')) return;
+  try{ await loadData(); renderMenu(); renderCartUI(); }catch(e){}
+});
 
 /* ============ CUSTOMER SITE ============ */
 function renderSite(){
-  const s = db.settings;
   $('#app').innerHTML = `
   <header>
     <div class="hbar">
-      <div class="logo" onclick="window.scrollTo({top:0})"><div class="lg">${s.logo?`<img src="${s.logo}">`:'🚆'}</div><span>${esc(s.brand)}</span></div>
+      <div class="logo" onclick="window.scrollTo({top:0})"><div class="lg">${S.logo?`<img src="${esc(S.logo)}">`:'🚆'}</div><span>${esc(S.brand)}</span></div>
       <div class="loc" onclick="openLocation()">📍 Delivering to<b id="locTxt">${loc?esc(loc.city+', '+loc.address):'Select location'}</b></div>
       <div class="search"><input id="q" placeholder="Search for food..." value="${esc(query)}" oninput="onSearch(this.value)"></div>
       <div class="hr">
@@ -230,25 +261,26 @@ function renderSite(){
     </div>
     <div class="chips"><div id="chips"></div></div>
   </header>
-  <section class="hero" id="hero" style="${s.hero?`background-image:linear-gradient(rgba(60,10,0,.55),rgba(60,10,0,.65)),url('${s.hero}')`:''}">
-    <div><h1>Welcome to ${esc(s.brand)}</h1><p>${esc(s.tagline)}</p><button class="btn" onclick="document.getElementById('menu').scrollIntoView()">View Menu</button></div>
+  <section class="hero" id="hero" style="${S.hero?`background-image:linear-gradient(rgba(60,10,0,.55),rgba(60,10,0,.65)),url('${esc(S.hero)}')`:''}">
+    <div><h1>Welcome to ${esc(S.brand)}</h1><p>${esc(S.tagline)}</p><button class="btn" onclick="document.getElementById('menu').scrollIntoView()">View Menu</button></div>
   </section>
   <div class="wrap">
     <div id="catSec"><h2 class="sec-title">What are you craving?</h2><p class="sec-sub">Pick a cuisine to jump straight to it.</p>
-      <div class="cats">${db.categories.map(c=>`<div class="cat" onclick="goCat('${c.id}')">${c.img?`<img src="${c.img}">`:`<span class="em">${esc(c.emoji)}</span>`}${esc(c.name)}</div>`).join('')}</div></div>
+      <div class="cats">${cats.map(c=>`<div class="cat" onclick="goCat('${c.id}')">${c.img?`<img src="${esc(c.img)}">`:`<span class="em">${esc(c.emoji)}</span>`}${esc(c.name)}</div>`).join('')}</div></div>
     <div id="menu"></div>
   </div>
-  <footer>© ${new Date().getFullYear()} ${esc(s.brand)} · Made with ♥ in Pakistan · <a href="#admin">Owner login</a></footer>`;
+  <footer>© ${new Date().getFullYear()} ${esc(S.brand)} · Made with ♥ in Pakistan · <a href="#admin">Owner login</a></footer>`;
   renderMenu(); renderCartUI();
   if(!loc) openLocation(true);
 }
 function renderMenu(){
+  if(!$('#menu')) return;
   const q = query.trim().toLowerCase();
-  const cats = db.categories.filter(c => db.items.some(i => i.cat === c.id));
-  $('#chips').innerHTML = cats.map(c=>`<button class="chip ${activeCat===c.id?'on':''}" data-c="${c.id}" onclick="goCat('${c.id}')">${esc(c.emoji)} ${esc(c.name)}</button>`).join('');
+  const withItems = cats.filter(c => items.some(i => i.cat === c.id));
+  $('#chips').innerHTML = withItems.map(c=>`<button class="chip ${activeCat===c.id?'on':''}" data-c="${c.id}" onclick="goCat('${c.id}')">${esc(c.emoji)} ${esc(c.name)}</button>`).join('');
   let html = '', found = 0;
-  db.categories.forEach(c => {
-    const list = db.items.filter(i => i.cat === c.id && (!q || i.name.toLowerCase().includes(q)));
+  cats.forEach(c => {
+    const list = items.filter(i => i.cat === c.id && (!q || i.name.toLowerCase().includes(q)));
     if(!list.length) return; found += list.length;
     html += `<section class="msec" id="cat-${c.id}" data-c="${c.id}"><h2 class="sec-title">${esc(c.emoji)} ${esc(c.name)}</h2><p class="sec-sub">${list.length} item${list.length>1?'s':''}</p><div class="grid">${list.map(itemCard).join('')}</div></section>`;
   });
@@ -280,7 +312,7 @@ window.addEventListener('scroll', () => {
 
 /* ---- item details ---- */
 function openItem(id){
-  const it = getItem(id); if(!it) return; const cat = db.categories.find(c=>c.id===it.cat);
+  const it = getItem(id); if(!it) return; const cat = cats.find(c=>c.id===it.cat);
   openModal(`<button class="x" onclick="closeModal()">✕</button><div class="dtl">
     <div class="pic">${thumb(it)}${it.stock?'':'<span class="badge">Out of Stock</span>'}</div>
     <small style="color:var(--mute)">${cat?esc(cat.name):''}</small><h2>${esc(it.name)}</h2>
@@ -293,52 +325,67 @@ function dq(d){ const e=$('#dqty'); e.textContent = Math.max(1, +e.textContent +
 
 /* ---- location ---- */
 function openLocation(force){
-  const cities = db.settings.cities;
   openModal(`${force?'':'<button class="x" onclick="closeModal()">✕</button>'}<div style="font-size:2.4rem">📍</div><h2>Where should we deliver?</h2>
     <p style="color:var(--mute)">Choose your city and enter your address to see what's available.</p>
     <label>City</label>
     <div class="dd" id="dd"><div class="cur" onclick="$('#dd').classList.toggle('open')"><span id="ddv">${loc?esc(loc.city):'Select City:'}</span><span>▾</span></div>
-      <div class="list">${cities.map(c=>`<div onclick="pickCity('${esc(c)}')">${esc(c)}</div>`).join('')}</div></div>
+      <div class="list">${S.cities.map((c,i)=>`<div onclick="pickCity(${i})">${esc(c)}</div>`).join('')}</div></div>
     <label>Full address</label><textarea id="addr" rows="2" placeholder="House #, street, area, landmark">${loc?esc(loc.address):''}</textarea>
     <div class="err" id="lerr"></div><button class="btn btn-red btn-block" onclick="saveLoc()">Confirm Location</button>`);
   window._city = loc ? loc.city : '';
 }
-function pickCity(c){ window._city = c; $('#ddv').textContent = c; $('#dd').classList.remove('open'); }
+function pickCity(i){ const c = S.cities[i]; window._city = c; $('#ddv').textContent = c; $('#dd').classList.remove('open'); }
 function saveLoc(){
   const a = $('#addr').value.trim();
   if(!window._city) return $('#lerr').textContent = 'Please select a city.';
   if(a.length < 5) return $('#lerr').textContent = 'Please enter your full address.';
-  loc = {city: window._city, address: a}; save('tit_loc', loc); closeModal(); renderSite();
+  loc = {city: window._city, address: a}; lsSet('tit_loc', loc); closeModal(); renderSite();
 }
 
-/* ---- auth ---- */
+/* ---- customer accounts (Supabase Auth) ---- */
 function openLogin(tab='login', msg=''){
   openModal(`<button class="x" onclick="pending=null;closeModal()">✕</button><h2>${tab==='login'?'Welcome back':'Create account'}</h2>
     <p style="color:var(--mute)">${msg||'Log in to place your order.'}</p>
     <div class="tabs"><button class="${tab==='login'?'on':''}" onclick="openLogin('login','${msg}')">Login</button><button class="${tab==='signup'?'on':''}" onclick="openLogin('signup','${msg}')">Sign up</button></div>
     ${tab==='signup'?`<label>Full name</label><input id="aName" placeholder="Your name">`:''}
-    <label>Email or phone</label><input id="aId" placeholder="you@email.com / 03xx-xxxxxxx">
-    <label>Password</label><input id="aPw" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doAuth('${tab}')">
+    <label>Email</label><input id="aId" type="email" placeholder="you@email.com">
+    <label>Password</label><input id="aPw" type="password" placeholder="Password (min 6 characters)" onkeydown="if(event.key==='Enter')doAuth('${tab}')">
     <div class="err" id="aerr"></div>
-    <button class="btn btn-red btn-block" onclick="doAuth('${tab}')">${tab==='login'?'Login':'Sign up'}</button>
-    ${tab==='login'?`<p style="text-align:center;margin-top:12px;font-size:.85rem"><a href="#" onclick="toast('Password reset: contact the restaurant');return false" style="color:var(--red)">Forgot password?</a></p>`:''}`);
+    <button class="btn btn-red btn-block" id="abtn" onclick="doAuth('${tab}')">${tab==='login'?'Login':'Sign up'}</button>
+    ${tab==='login'?`<p style="text-align:center;margin-top:12px;font-size:.85rem"><a href="#" onclick="forgot();return false" style="color:var(--red)">Forgot password?</a></p>`:''}`);
 }
-function doAuth(tab){
-  const id = $('#aId').value.trim().toLowerCase(), pw = $('#aPw').value, err = m => $('#aerr').textContent = m;
+async function doAuth(tab){
+  const id = $('#aId').value.trim().toLowerCase(), pw = $('#aPw').value, err = m => { $('#aerr').textContent = m; }, btn = $('#abtn');
   if(!id || !pw) return err('Please fill in all fields.');
-  if(tab === 'signup'){
-    const name = $('#aName').value.trim(); if(!name) return err('Please enter your name.');
-    if(pw.length < 6) return err('Password must be at least 6 characters.');
-    if(db.users.some(u => u.id === id)) return err('An account with this email/phone already exists.');
-    db.users.push({id, name, pw: btoa(unescape(encodeURIComponent(pw)))}); saveDb(); session = {id, name};
-  } else {
-    const u = db.users.find(u => u.id === id && u.pw === btoa(unescape(encodeURIComponent(pw))));
-    if(!u) return err('Incorrect email/phone or password.'); session = {id: u.id, name: u.name};
-  }
-  save('tit_session', session); closeModal(); renderSite(); toast('Logged in as ' + session.name);
-  if(pending){ const p = pending; pending = null; p(); }
+  let name = '';
+  if(tab === 'signup'){ name = $('#aName').value.trim(); if(!name) return err('Please enter your name.'); if(pw.length < 6) return err('Password must be at least 6 characters.'); }
+  btn.disabled = true; err('');
+  try{
+    const r = tab === 'signup' ? await sb.auth.signUp({email:id, password:pw, options:{data:{name}}}) : await sb.auth.signInWithPassword({email:id, password:pw});
+    if(r.error) throw r.error;
+    if(!r.data.session){ btn.disabled = false; $('#aerr').innerHTML = '<span style="color:var(--green)">Account created! Check your email to confirm it, then log in.</span>'; return; }
+    session = mapSession(r.data.session); adminOk = null;
+    closeModal(); renderSite(); toast('Logged in as ' + session.name);
+    if(pending){ const p = pending; pending = null; p(); }
+  }catch(e){ btn.disabled = false; err(e.message || 'Something went wrong.'); }
 }
-function logout(){ session = null; localStorage.removeItem('tit_session'); renderSite(); toast('Logged out'); }
+async function forgot(){
+  const id = ($('#aId').value || '').trim().toLowerCase();
+  if(!id) return $('#aerr').textContent = 'Type your email above first.';
+  const {error} = await sb.auth.resetPasswordForEmail(id, {redirectTo: location.origin + location.pathname});
+  if(error) return $('#aerr').textContent = error.message;
+  $('#aerr').innerHTML = '<span style="color:var(--green)">If that email has an account, a reset link is on its way.</span>';
+}
+function openNewPassword(){
+  openModal(`<h2>Set a new password</h2><label>New password</label><input id="np" type="password" placeholder="At least 6 characters">
+    <div class="err" id="nperr"></div><button class="btn btn-red btn-block" onclick="saveNewPassword()">Save password</button>`);
+}
+async function saveNewPassword(){
+  const p = $('#np').value; if(p.length < 6) return $('#nperr').textContent = 'Password must be at least 6 characters.';
+  const {error} = await sb.auth.updateUser({password:p}); if(error) return $('#nperr').textContent = error.message;
+  closeModal(); toast('Password updated'); if(ready) route();
+}
+async function logout(){ await sb.auth.signOut(); session = null; adminOk = null; ordersLoaded = false; renderSite(); toast('Logged out'); }
 function needLogin(fn){ if(session) return true; pending = fn; openLogin('login', 'Please log in first to order.'); return false; }
 
 /* ---- cart ---- */
@@ -358,138 +405,213 @@ function chg(id, d){ const c = cart.find(c => c.id === id); if(!c) return; c.qty
 function rm(id){ cart = cart.filter(x => x.id !== id); saveCart(); renderCartUI(); }
 function toggleCart(open){ $('#drawer').classList.toggle('open', open); $('#shade').classList.toggle('show', open); }
 function renderCartUI(){
-  cart = cart.filter(c => getItem(c.id)); const t = totals();
+  cart = cart.filter(c => getItem(c.id)); saveCart(); const t = totals();
   const b = $('#cBadge'); if(b){ b.textContent = t.count; $('#cAmt').textContent = money(t.total); }
   $('#drawer').innerHTML = `<div class="dh"><span>🛒 Your Cart</span><button class="x" style="position:static" onclick="toggleCart(false)">✕</button></div>
   <div class="db">${cart.length ? cart.map(c=>{ const it=getItem(c.id); return `<div class="ci"><div class="th">${thumb(it)}</div>
     <div class="in"><b>${esc(it.name)}</b>${money(it.price)}<div class="qty" style="margin-top:4px"><button onclick="chg('${it.id}',-1)">−</button><b>${c.qty}</b><button onclick="chg('${it.id}',1)">+</button></div></div>
     <div style="text-align:right"><b>${money(it.price*c.qty)}</b><br><button onclick="rm('${it.id}')" style="background:none;color:var(--red);font-size:.8rem">Remove</button></div></div>`}).join('') : '<div class="empty"><div style="font-size:3rem">🛒</div>Your cart is empty.<br>Add something tasty!</div>'}</div>
   ${cart.length?`<div class="df"><div class="row"><span>Subtotal</span><span>${money(t.sub)}</span></div>
-    <div class="row"><span>Tax (${db.settings.tax}%)</span><span>${money(t.tax)}</span></div>
+    <div class="row"><span>Tax (${S.tax}%)</span><span>${money(t.tax)}</span></div>
     <div class="row"><span>Delivery</span><span>${t.del?money(t.del):'FREE'}</span></div>
     <div class="row t"><span>Total</span><span>${money(t.total)}</span></div>
     <button class="btn btn-red btn-block" style="margin-top:12px" onclick="openCheckout()">Proceed to Checkout</button></div>`:''}`;
 }
 
-/* ---- checkout ---- */
+/* ---- checkout: the order is saved in the database ---- */
 function openCheckout(){
   if(!cart.length) return toast('Your cart is empty');
   if(!needLogin(openCheckout)) return; toggleCart(false); const t = totals();
+  if(!loc) return openLocation(true);
   openModal(`<button class="x" onclick="closeModal()">✕</button><h2>Checkout</h2>
     <label>Delivering to</label><div style="background:var(--cream);padding:11px 13px;border-radius:12px;font-size:.92rem">📍 ${esc(loc.city)}, ${esc(loc.address)} <a href="#" onclick="openLocation();return false" style="color:var(--red);margin-left:6px">Change</a></div>
-    <label>Contact phone</label><input id="cPhone" placeholder="03xx-xxxxxxx">
+    <label>Contact phone</label><input id="cPhone" type="tel" placeholder="03xx-xxxxxxx">
     <label>Payment method</label><div class="pay"><label><input type="radio" name="pm" value="Cash on Delivery" checked> Cash on Delivery</label>
     <label><input type="radio" name="pm" value="Card"> Debit / Credit Card</label><label><input type="radio" name="pm" value="JazzCash"> JazzCash</label><label><input type="radio" name="pm" value="Easypaisa"> Easypaisa</label></div>
-    <div style="margin-top:12px"><div class="row"><span>Subtotal</span><span>${money(t.sub)}</span></div><div class="row"><span>Tax (${db.settings.tax}%)</span><span>${money(t.tax)}</span></div>
+    <div style="margin-top:12px"><div class="row"><span>Subtotal</span><span>${money(t.sub)}</span></div><div class="row"><span>Tax (${S.tax}%)</span><span>${money(t.tax)}</span></div>
     <div class="row"><span>Delivery</span><span>${t.del?money(t.del):'FREE'}</span></div><div class="row t"><span>Total</span><span>${money(t.total)}</span></div></div>
-    <div class="err" id="cerr"></div><button class="btn btn-red btn-block" onclick="placeOrder()">Place Order</button>`);
+    <div class="err" id="cerr"></div><button class="btn btn-red btn-block" id="pobtn" onclick="placeOrder()">Place Order</button>`);
 }
-function placeOrder(){
+async function placeOrder(){
   const phone = $('#cPhone').value.trim(); if(phone.length < 7) return $('#cerr').textContent = 'Please enter a valid phone number.';
-  const pm = document.querySelector('input[name=pm]:checked').value, t = totals();
-  const order = {id:'TIT-' + String(1000 + db.orders.length + 1), user:session.name, userId:session.id, phone, address:`${loc.city}, ${loc.address}`, payment:pm,
-    items:cart.map(c=>{ const it=getItem(c.id); return {name:it.name, qty:c.qty, price:it.price}; }), sub:t.sub, tax:t.tax, del:t.del, total:t.total, status:'Pending', date:new Date().toLocaleString('en-PK')};
-  db.orders.unshift(order); saveDb(); cart = []; saveCart(); renderCartUI();
+  const pm = document.querySelector('input[name=pm]:checked').value, btn = $('#pobtn');
+  btn.disabled = true; btn.textContent = 'Placing order...'; $('#cerr').textContent = '';
+  const {data, error} = await sb.rpc('place_order', {p_items: cart.map(c => ({id:c.id, qty:c.qty})), p_phone: phone, p_address: `${loc.city}, ${loc.address}`, p_payment: pm});
+  if(error){
+    btn.disabled = false; btn.textContent = 'Place Order'; $('#cerr').textContent = error.message || 'Could not place the order. Please try again.';
+    try{ await loadData(); renderMenu(); renderCartUI(); }catch(e){}
+    return;
+  }
+  cart = []; saveCart(); renderCartUI();
   openModal(`<div style="text-align:center"><div style="font-size:3.5rem">🎉</div><h2>Order placed!</h2><p style="color:var(--mute);margin:8px 0">Thank you, ${esc(session.name.split(' ')[0])}. Your food is being prepared.</p>
-    <div style="background:var(--cream);border-radius:14px;padding:14px;margin:14px 0"><small>Order number</small><div style="font-size:1.5rem;font-weight:900;color:var(--red)">${order.id}</div><div>Total: <b>${money(order.total)}</b> · ${esc(pm)}</div></div>
+    <div style="background:var(--cream);border-radius:14px;padding:14px;margin:14px 0"><small>Order number</small><div style="font-size:1.5rem;font-weight:900;color:var(--red)">TIT-${1000 + Number(data.num)}</div><div>Total: <b>${money(data.total)}</b> · ${esc(pm)}</div></div>
     <button class="btn btn-red btn-block" onclick="closeModal()">Continue browsing</button></div>`);
 }
 
 /* ============ ADMIN PANEL ============ */
-function renderAdmin(){
-  if(!isAdmin()){
-    $('#app').innerHTML = `<div style="min-height:100vh;display:grid;place-items:center;padding:20px"><div class="modal" style="animation:none"><h2>🔐 Owner Login</h2>
-      <p style="color:var(--mute)">Sign in to manage your website.</p><label>Username</label><input id="au"><label>Password</label><input id="ap" type="password" onkeydown="if(event.key==='Enter')adminLogin()">
-      <div class="err" id="aerr2"></div><button class="btn btn-red btn-block" onclick="adminLogin()">Login</button>
-      <p style="text-align:center;margin-top:12px;font-size:.85rem"><a href="#" onclick="location.hash='';return false" style="color:var(--red)">← Back to website</a></p>
-      <p style="text-align:center;margin-top:8px;font-size:.75rem;color:var(--mute)">Default: admin / admin123 (change it in Settings)</p></div></div>`;
-    return;
+const orderCode = o => 'TIT-' + (1000 + Number(o.num));
+const pendingCount = () => orders.filter(o => o.status === 'Pending').length;
+async function fetchOrders(){
+  const d = await must(sb.from('orders').select('*').order('created_at', {ascending:false}).limit(200));
+  orders = d; ordersSig = JSON.stringify(d.map(o => [o.id, o.status])); ordersLoaded = true;
+}
+function adminLoginPage(msg){
+  $('#app').innerHTML = `<div style="min-height:100vh;display:grid;place-items:center;padding:20px"><div class="modal" style="animation:none"><h2>🔐 Owner Login</h2>
+    <p style="color:var(--mute)">Sign in to manage your website.</p>
+    <label>Email</label><input id="au" type="email" autocomplete="username"><label>Password</label><input id="ap" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')adminLogin()">
+    <div class="err" id="aerr2">${esc(msg || '')}</div><button class="btn btn-red btn-block" onclick="adminLogin()">Login</button>
+    ${session ? `<p style="text-align:center;margin-top:10px;font-size:.85rem">Signed in as ${esc(session.email)} · <a href="#" onclick="logout().then(()=>{location.hash='#admin';route()});return false" style="color:var(--red)">Sign out</a></p>` : ''}
+    <p style="text-align:center;margin-top:12px;font-size:.85rem"><a href="#" onclick="location.hash='';return false" style="color:var(--red)">← Back to website</a></p></div></div>`;
+}
+async function adminLogin(){
+  const email = $('#au').value.trim().toLowerCase(), pw = $('#ap').value, err = m => { $('#aerr2').textContent = m; };
+  if(!email || !pw) return err('Enter your email and password.');
+  const {data, error} = await sb.auth.signInWithPassword({email, password:pw});
+  if(error) return err(error.message);
+  session = mapSession(data.session); adminOk = null; ordersLoaded = false; renderAdmin(true);
+}
+async function renderAdmin(refetch){
+  document.title = S.brand + ' · Admin';
+  if(!session) return adminLoginPage();
+  if(adminOk === null){
+    $('#app').innerHTML = '<div class="loading"><div><div class="spin"></div>Checking access...</div></div>';
+    const {data, error} = await sb.rpc('is_admin'); adminOk = !error && data === true;
   }
-  const tabs = {items:'🍽️ Menu Items', categories:'🗂️ Categories', orders:`📦 Orders (${db.orders.filter(o=>o.status==='Pending').length})`, settings:'⚙️ Settings'};
-  $('#app').innerHTML = `<div class="adm"><div class="top"><h1>${esc(db.settings.brand)} · Admin</h1><div><button class="btn btn-out btn-sm" onclick="location.hash=''">View website</button> <button class="btn btn-red btn-sm" onclick="sessionStorage.removeItem('tit_admin');renderAdmin()">Logout</button></div></div>
-    <div class="atabs">${Object.entries(tabs).map(([k,v])=>`<button class="${adminTab===k?'on':''}" onclick="adminTab='${k}';renderAdmin()">${v}</button>`).join('')}</div>
+  if(!adminOk) return adminLoginPage('This account is not an owner account. Sign in with the owner email.');
+  if(refetch || !ordersLoaded){ try{ await fetchOrders(); }catch(e){ fail(e); } }
+  const tabs = {items:'🍽️ Menu Items', categories:'🗂️ Categories', orders:`📦 Orders${pendingCount()?` (${pendingCount()} new)`:''}`, settings:'⚙️ Settings'};
+  $('#app').innerHTML = `<div class="adm"><div class="top"><h1>${esc(S.brand)} · Admin</h1><div><button class="btn btn-out btn-sm" onclick="location.hash=''">View website</button> <button class="btn btn-red btn-sm" onclick="adminLogout()">Logout</button></div></div>
+    <div class="atabs">${Object.entries(tabs).map(([k,v])=>`<button class="${adminTab===k?'on':''}" onclick="setTab('${k}')">${v}</button>`).join('')}</div>
     <div class="panel" id="apanel"></div></div>`;
   ({items:adminItems, categories:adminCats, orders:adminOrders, settings:adminSettings})[adminTab]();
 }
-function adminLogin(){
-  if($('#au').value.trim() === db.settings.adminUser && $('#ap').value === db.settings.adminPass){ sessionStorage.setItem('tit_admin','1'); renderAdmin(); }
-  else $('#aerr2').textContent = 'Wrong username or password.';
-}
+function setTab(k){ adminTab = k; renderAdmin(k === 'orders'); }
+async function adminLogout(){ await sb.auth.signOut(); session = null; adminOk = null; ordersLoaded = false; renderAdmin(); }
+async function refreshAdmin(){ try{ await loadData(); renderAdmin(); }catch(e){ fail(e); } }
+
+/* ---- items ---- */
 function adminItems(){
-  $('#apanel').innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:12px"><b>${db.items.length} items</b><button class="btn btn-red btn-sm" onclick="editItem()">+ Add item</button></div>
-  <table><tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th></th></tr>${db.items.map(it=>{ const c=db.categories.find(c=>c.id===it.cat);
+  $('#apanel').innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:12px"><b>${items.length} items</b><button class="btn btn-red btn-sm" onclick="editItem()">+ Add item</button></div>
+  <table><tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th></th></tr>${items.map(it=>{ const c=cats.find(c=>c.id===it.cat);
     return `<tr><td><div class="th">${thumb(it)}</div></td><td><b>${esc(it.name)}</b></td><td>${c?esc(c.name):'—'}</td><td>${money(it.price)}</td>
     <td><span class="pill ${it.stock?'':'no'}">${it.stock?'Available':'Out of stock'}</span> <button class="btn btn-out btn-sm" onclick="toggleStock('${it.id}')">Toggle</button></td>
     <td style="white-space:nowrap"><button class="btn btn-out btn-sm" onclick="editItem('${it.id}')">Edit</button> <button class="btn btn-sm" style="background:#fde4e4;color:var(--red)" onclick="delItem('${it.id}')">Delete</button></td></tr>`}).join('')}</table>`;
 }
-function toggleStock(id){ const it=getItem(id); it.stock=!it.stock; saveDb(); renderAdmin(); }
-function delItem(id){ if(!confirm('Delete this item?')) return; db.items = db.items.filter(i=>i.id!==id); cart = cart.filter(c=>c.id!==id); saveCart(); saveDb(); renderAdmin(); }
+async function toggleStock(id){ const it = getItem(id); try{ await mustRows(sb.from('items').update({stock:!it.stock}).eq('id', id).select('id')); await refreshAdmin(); }catch(e){ fail(e); } }
+async function delItem(id){ if(!confirm('Delete this item?')) return; try{ await mustRows(sb.from('items').delete().eq('id', id).select('id')); await refreshAdmin(); }catch(e){ fail(e); } }
 function editItem(id){
-  const it = id ? getItem(id) : {name:'',desc:'',price:'',cat:db.categories[0]?.id,img:'',emoji:'🍽️',stock:true}; window._img = it.img;
+  if(!cats.length) return toast('Add a category first.');
+  const it = id ? getItem(id) : {name:'',desc:'',price:'',cat:cats[0].id,img:'',emoji:'🍽️',stock:true}; window._img = it.img;
   openModal(`<button class="x" onclick="closeModal()">✕</button><h2>${id?'Edit':'Add'} item</h2>
     <label>Name</label><input id="fn" value="${esc(it.name)}"><label>Description</label><textarea id="fd" rows="3">${esc(it.desc)}</textarea>
     <div class="g2"><div><label>Price (PKR)</label><input id="fp" type="number" min="0" value="${it.price}"></div>
-    <div><label>Category</label><select id="fc">${db.categories.map(c=>`<option value="${c.id}" ${c.id===it.cat?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+    <div><label>Category</label><select id="fc">${cats.map(c=>`<option value="${c.id}" ${c.id===it.cat?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
     <div><label>Emoji (if no photo)</label><input id="fe" value="${esc(it.emoji)}"></div>
     <div><label>Status</label><select id="fs"><option value="1" ${it.stock?'selected':''}>Available</option><option value="0" ${it.stock?'':'selected'}>Out of stock</option></select></div></div>
-    <label>Picture</label><input type="file" accept="image/*" onchange="fileToDataURL(this.files[0],d=>{window._img=d;$('#fprev').innerHTML='<img src=\\''+d+'\\'>'})">
-    <div class="imgprev" id="fprev">${it.img?`<img src="${it.img}">`:esc(it.emoji)}</div>
-    <div class="err" id="ferr"></div><button class="btn btn-red btn-block" onclick="saveItem('${id||''}')">Save item</button>`, true);
+    <label>Picture</label><input type="file" accept="image/*" onchange="upImg(this,'fprev')">
+    <div class="imgprev" id="fprev">${it.img?`<img src="${esc(it.img)}">`:esc(it.emoji)}</div>
+    <div class="err" id="ferr"></div><button class="btn btn-red btn-block" id="fsave" onclick="saveItem('${id||''}')">Save item</button>`, true);
 }
-function saveItem(id){
-  const name=$('#fn').value.trim(), price=+$('#fp').value; if(!name || !(price >= 0) || $('#fp').value==='') return $('#ferr').textContent='Name and price are required.';
-  const o = {name, desc:$('#fd').value.trim(), price, cat:$('#fc').value, emoji:$('#fe').value||'🍽️', stock:$('#fs').value==='1', img:window._img||''};
-  if(id) Object.assign(getItem(id), o); else db.items.push({id:uid('i'), ...o}); saveDb(); closeModal(); renderAdmin(); toast('Saved');
+async function upImg(inp, prevId){
+  const f = inp.files[0]; if(!f) return; toast('Uploading picture...');
+  try{ const url = await uploadImage(f); window._img = url; $('#' + prevId).innerHTML = `<img src="${esc(url)}">`; toast('Picture uploaded'); }
+  catch(e){ fail(e); }
 }
+async function saveItem(id){
+  const name = $('#fn').value.trim(), raw = $('#fp').value, price = Number(raw);
+  if(!name || raw === '' || !(price >= 0)) return $('#ferr').textContent = 'Name and price are required.';
+  const o = {name, descr:$('#fd').value.trim(), price, cat_id:$('#fc').value, emoji:$('#fe').value || '🍽️', stock:$('#fs').value === '1', img:window._img || ''};
+  $('#fsave').disabled = true;
+  try{
+    if(id) await mustRows(sb.from('items').update(o).eq('id', id).select('id'));
+    else await mustRows(sb.from('items').insert({...o, sort: items.reduce((m,i)=>Math.max(m, i.sort), 0) + 1}).select('id'));
+    closeModal(); await refreshAdmin(); toast('Saved');
+  }catch(e){ $('#fsave').disabled = false; $('#ferr').textContent = e.message; }
+}
+
+/* ---- categories ---- */
 function adminCats(){
-  $('#apanel').innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:12px"><b>${db.categories.length} categories</b><button class="btn btn-red btn-sm" onclick="editCat()">+ Add category</button></div>
-  <table><tr><th></th><th>Name</th><th>Items</th><th>Order</th><th></th></tr>${db.categories.map((c,i)=>`<tr><td><div class="th">${c.img?`<img src="${c.img}">`:esc(c.emoji)}</div></td><td><b>${esc(c.name)}</b></td><td>${db.items.filter(x=>x.cat===c.id).length}</td>
+  $('#apanel').innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:12px"><b>${cats.length} categories</b><button class="btn btn-red btn-sm" onclick="editCat()">+ Add category</button></div>
+  <table><tr><th></th><th>Name</th><th>Items</th><th>Order</th><th></th></tr>${cats.map((c,i)=>`<tr><td><div class="th">${c.img?`<img src="${esc(c.img)}">`:esc(c.emoji)}</div></td><td><b>${esc(c.name)}</b></td><td>${items.filter(x=>x.cat===c.id).length}</td>
     <td><button class="btn btn-out btn-sm" onclick="moveCat(${i},-1)">↑</button> <button class="btn btn-out btn-sm" onclick="moveCat(${i},1)">↓</button></td>
     <td style="white-space:nowrap"><button class="btn btn-out btn-sm" onclick="editCat('${c.id}')">Edit</button> <button class="btn btn-sm" style="background:#fde4e4;color:var(--red)" onclick="delCat('${c.id}')">Delete</button></td></tr>`).join('')}</table>`;
 }
-function moveCat(i,d){ const j=i+d; if(j<0||j>=db.categories.length) return; [db.categories[i],db.categories[j]]=[db.categories[j],db.categories[i]]; saveDb(); renderAdmin(); }
-function delCat(id){ const n=db.items.filter(i=>i.cat===id).length; if(!confirm(n?`This also deletes its ${n} item(s). Continue?`:'Delete this category?')) return;
-  db.items.filter(i=>i.cat===id).forEach(i=>{cart=cart.filter(c=>c.id!==i.id)}); db.items=db.items.filter(i=>i.cat!==id); db.categories=db.categories.filter(c=>c.id!==id); saveCart(); saveDb(); renderAdmin(); }
+async function moveCat(i, d){
+  const j = i + d; if(j < 0 || j >= cats.length) return; const a = cats[i], b = cats[j];
+  const sa = a.sort, sb2 = b.sort === a.sort ? b.sort + (d > 0 ? 1 : -1) : b.sort;
+  try{ await mustRows(sb.from('categories').update({sort:sb2}).eq('id', a.id).select('id')); await mustRows(sb.from('categories').update({sort:sa}).eq('id', b.id).select('id')); await refreshAdmin(); }catch(e){ fail(e); }
+}
+async function delCat(id){
+  const n = items.filter(i => i.cat === id).length;
+  if(!confirm(n ? `This also deletes its ${n} item(s). Continue?` : 'Delete this category?')) return;
+  try{ await mustRows(sb.from('categories').delete().eq('id', id).select('id')); await refreshAdmin(); }catch(e){ fail(e); }
+}
 function editCat(id){
-  const c = id ? db.categories.find(c=>c.id===id) : {name:'',emoji:'🍽️',img:''}; window._img = c.img;
+  const c = id ? cats.find(c=>c.id===id) : {name:'',emoji:'🍽️',img:''}; window._img = c.img;
   openModal(`<button class="x" onclick="closeModal()">✕</button><h2>${id?'Edit':'Add'} category</h2><label>Name</label><input id="cn" value="${esc(c.name)}">
     <label>Emoji</label><input id="ce" value="${esc(c.emoji)}"><label>Picture (optional)</label>
-    <input type="file" accept="image/*" onchange="fileToDataURL(this.files[0],d=>{window._img=d;$('#cprev').innerHTML='<img src=\\''+d+'\\'>'})"><div class="imgprev" id="cprev">${c.img?`<img src="${c.img}">`:esc(c.emoji)}</div>
-    <div class="err" id="cerr2"></div><button class="btn btn-red btn-block" onclick="saveCat('${id||''}')">Save</button>`);
+    <input type="file" accept="image/*" onchange="upImg(this,'cprev')"><div class="imgprev" id="cprev">${c.img?`<img src="${esc(c.img)}">`:esc(c.emoji)}</div>
+    <div class="err" id="cerr2"></div><button class="btn btn-red btn-block" id="csave" onclick="saveCat('${id||''}')">Save</button>`);
 }
-function saveCat(id){
-  const name=$('#cn').value.trim(); if(!name) return $('#cerr2').textContent='Name is required.';
-  const o={name, emoji:$('#ce').value||'🍽️', img:window._img||''}; if(id) Object.assign(db.categories.find(c=>c.id===id), o); else db.categories.push({id:uid('c'), ...o});
-  saveDb(); closeModal(); renderAdmin();
-}
-function adminOrders(){
-  const st = ['Pending','Preparing','Out for Delivery','Delivered','Cancelled'];
-  $('#apanel').innerHTML = db.orders.length ? `<table><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th></tr>${db.orders.map(o=>`<tr><td><b>${o.id}</b><br><small>${esc(o.date)}</small></td>
-    <td>${esc(o.user)}<br><small>${esc(o.phone)}<br>${esc(o.address)}</small></td><td><small>${o.items.map(i=>`${i.qty}× ${esc(i.name)}`).join('<br>')}</small></td>
-    <td><b>${money(o.total)}</b><br><small>${esc(o.payment)}</small></td><td><select onchange="setStatus('${o.id}',this.value)">${st.map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select></td></tr>`).join('')}</table>` : '<div class="empty">No orders yet.</div>';
-}
-function setStatus(id, s){ db.orders.find(o=>o.id===id).status = s; saveDb(); toast('Order updated'); }
-function adminSettings(){
-  const s = db.settings;
-  $('#apanel').innerHTML = `<div class="g2"><div><label>Brand name</label><input id="sb" value="${esc(s.brand)}"></div><div><label>Tagline</label><input id="st" value="${esc(s.tagline)}"></div>
-    <div><label>Tax (%)</label><input id="sx" type="number" min="0" value="${s.tax}"></div><div><label>Delivery charges (PKR)</label><input id="sd" type="number" min="0" value="${s.delivery}"></div>
-    <div><label>Free delivery above (PKR, 0 = never)</label><input id="sf" type="number" min="0" value="${s.freeAbove}"></div><div></div>
-    <div><label>Logo</label><input type="file" accept="image/*" onchange="fileToDataURL(this.files[0],d=>{db.settings.logo=d;saveDb();toast('Logo updated');adminSettings()})"><div class="imgprev">${s.logo?`<img src="${s.logo}">`:'🚆'}</div>
-      ${s.logo?`<button class="btn btn-out btn-sm" style="margin-top:6px" onclick="db.settings.logo='';saveDb();adminSettings()">Remove</button>`:''}</div>
-    <div><label>Hero banner image</label><input type="file" accept="image/*" onchange="fileToDataURL(this.files[0],d=>{db.settings.hero=d;saveDb();toast('Banner updated');adminSettings()})"><div class="imgprev">${s.hero?`<img src="${s.hero}">`:'🖼️'}</div>
-      ${s.hero?`<button class="btn btn-out btn-sm" style="margin-top:6px" onclick="db.settings.hero='';saveDb();adminSettings()">Remove</button>`:''}</div></div>
-    <label>Delivery cities (one per line)</label><textarea id="sc" rows="6">${esc(s.cities.join('\n'))}</textarea>
-    <div class="g2"><div><label>Admin username</label><input id="su" value="${esc(s.adminUser)}"></div><div><label>Admin password</label><input id="sp" type="text" value="${esc(s.adminPass)}"></div></div>
-    <button class="btn btn-red" style="margin-top:16px" onclick="saveSettings()">Save settings</button>
-    <hr style="margin:22px 0;border:0;border-top:1px solid var(--line)"><button class="btn btn-sm" style="background:#fde4e4;color:var(--red)" onclick="if(confirm('Reset EVERYTHING (menu, orders, users) to defaults?')){localStorage.clear();location.reload()}">Reset all data</button>`;
-}
-function saveSettings(){
-  const s = db.settings; s.brand=$('#sb').value.trim()||s.brand; s.tagline=$('#st').value.trim(); s.tax=+$('#sx').value||0; s.delivery=+$('#sd').value||0; s.freeAbove=+$('#sf').value||0;
-  s.cities=$('#sc').value.split('\n').map(x=>x.trim()).filter(Boolean); s.adminUser=$('#su').value.trim()||'admin'; s.adminPass=$('#sp').value||'admin123';
-  saveDb(); document.title=s.brand; toast('Settings saved'); renderAdmin();
+async function saveCat(id){
+  const name = $('#cn').value.trim(); if(!name) return $('#cerr2').textContent = 'Name is required.';
+  const o = {name, emoji:$('#ce').value || '🍽️', img:window._img || ''}; $('#csave').disabled = true;
+  try{
+    if(id) await mustRows(sb.from('categories').update(o).eq('id', id).select('id'));
+    else await mustRows(sb.from('categories').insert({...o, sort: cats.reduce((m,c)=>Math.max(m, c.sort), 0) + 1}).select('id'));
+    closeModal(); await refreshAdmin();
+  }catch(e){ $('#csave').disabled = false; $('#cerr2').textContent = e.message; }
 }
 
-route();
+/* ---- orders ---- */
+function adminOrders(){
+  const st = ['Pending','Preparing','Out for Delivery','Delivered','Cancelled'];
+  const head = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>${orders.length} order${orders.length===1?'':'s'}</b><button class="btn btn-out btn-sm" onclick="setTab('orders')">↻ Refresh</button></div>`;
+  $('#apanel').innerHTML = head + (orders.length ? `<table><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th></tr>${orders.map(o=>`<tr><td><b>${orderCode(o)}</b><br><small>${esc(new Date(o.created_at).toLocaleString('en-PK'))}</small></td>
+    <td>${esc(o.customer_name)}<br><small>${esc(o.phone)}<br>${esc(o.address)}</small></td><td><small>${(o.items||[]).map(i=>`${esc(i.qty)}× ${esc(i.name)}`).join('<br>')}</small></td>
+    <td><b>${money(o.total)}</b><br><small>${esc(o.payment)}</small></td><td><select onchange="setStatus('${o.id}',this.value)">${st.map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select></td></tr>`).join('')}</table>` : '<div class="empty">No orders yet.</div>');
+}
+async function setStatus(id, s){
+  try{ await mustRows(sb.from('orders').update({status:s}).eq('id', id).select('id')); const o = orders.find(x => x.id === id); if(o) o.status = s;
+    ordersSig = JSON.stringify(orders.map(o => [o.id, o.status])); toast('Order updated'); }catch(e){ fail(e); }
+}
+setInterval(async () => {
+  if(location.hash !== '#admin' || !adminOk || !ready || $('#ov').classList.contains('show')) return;
+  try{ const before = ordersSig, prev = pendingCount(); await fetchOrders();
+    if(ordersSig !== before){ if(pendingCount() > prev) toast('🔔 New order received!'); renderAdmin(); } }catch(e){}
+}, 30000);
+
+/* ---- settings ---- */
+function adminSettings(){
+  $('#apanel').innerHTML = `<div class="g2"><div><label>Brand name</label><input id="sb" value="${esc(S.brand)}"></div><div><label>Tagline</label><input id="st" value="${esc(S.tagline)}"></div>
+    <div><label>Tax (%)</label><input id="sx" type="number" min="0" value="${S.tax}"></div><div><label>Delivery charges (PKR)</label><input id="sd" type="number" min="0" value="${S.delivery}"></div>
+    <div><label>Free delivery above (PKR, 0 = never)</label><input id="sf" type="number" min="0" value="${S.freeAbove}"></div><div></div>
+    <div><label>Logo</label><input type="file" accept="image/*" onchange="setSiteImg(this,'logo')"><div class="imgprev">${S.logo?`<img src="${esc(S.logo)}">`:'🚆'}</div>
+      ${S.logo?`<button class="btn btn-out btn-sm" style="margin-top:6px" onclick="clearSiteImg('logo')">Remove</button>`:''}</div>
+    <div><label>Hero banner image</label><input type="file" accept="image/*" onchange="setSiteImg(this,'hero')"><div class="imgprev">${S.hero?`<img src="${esc(S.hero)}">`:'🖼️'}</div>
+      ${S.hero?`<button class="btn btn-out btn-sm" style="margin-top:6px" onclick="clearSiteImg('hero')">Remove</button>`:''}</div></div>
+    <label>Delivery cities (one per line)</label><textarea id="sc" rows="6">${esc(S.cities.join('\n'))}</textarea>
+    <button class="btn btn-red" style="margin-top:16px" onclick="saveSettings()">Save settings</button>
+    <hr style="margin:22px 0;border:0;border-top:1px solid var(--line)">
+    <label>Change my owner password (${esc(session.email)})</label><div style="display:flex;gap:10px"><input id="npw" type="password" placeholder="New password (min 6 characters)"><button class="btn btn-out" style="white-space:nowrap" onclick="changeMyPassword()">Change</button></div>`;
+}
+async function saveSettings(){
+  const cities = $('#sc').value.split('\n').map(x => x.trim()).filter(Boolean);
+  if(!cities.length) return toast('Add at least one city.');
+  const o = {brand:$('#sb').value.trim() || S.brand, tagline:$('#st').value.trim(), tax:Number($('#sx').value) || 0, delivery:Number($('#sd').value) || 0, free_above:Number($('#sf').value) || 0, cities};
+  try{ await mustRows(sb.from('settings').update(o).eq('id', 1).select('id')); await refreshAdmin(); toast('Settings saved'); }catch(e){ fail(e); }
+}
+async function setSiteImg(inp, field){
+  const f = inp.files[0]; if(!f) return; toast('Uploading...');
+  try{ const url = await uploadImage(f); await mustRows(sb.from('settings').update({[field]:url}).eq('id', 1).select('id')); await refreshAdmin(); toast('Updated'); }catch(e){ fail(e); }
+}
+async function clearSiteImg(field){ try{ await mustRows(sb.from('settings').update({[field]:''}).eq('id', 1).select('id')); await refreshAdmin(); }catch(e){ fail(e); } }
+async function changeMyPassword(){
+  const p = $('#npw').value; if(p.length < 6) return toast('Password must be at least 6 characters.');
+  const {error} = await sb.auth.updateUser({password:p}); if(error) return fail(error); $('#npw').value = ''; toast('Password changed');
+}
+
+init();
 </script>
 </body>
 </html>
