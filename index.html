@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taste in Train</title>
+<style>
+:root{--red:#d62828;--red-d:#a81c1c;--orange:#f77f00;--cream:#fff7ec;--ink:#2b1d16;--mute:#7a6a60;--card:#fff;--line:#f0e3d3;--green:#2a9d4a;--r:18px;--sh:0 6px 22px rgba(80,35,10,.10)}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:130px}
+body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;background:var(--cream);color:var(--ink);line-height:1.45}
+button{font:inherit;cursor:pointer;border:0}
+input,select,textarea{font:inherit;width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--orange)}
+label{display:block;font-size:.82rem;font-weight:600;margin:12px 0 5px;color:var(--mute)}
+.btn{padding:11px 20px;border-radius:999px;font-weight:700;transition:.2s}
+.btn-red{background:var(--red);color:#fff}.btn-red:hover{background:var(--red-d)}
+.btn-out{background:#fff;color:var(--red);border:2px solid var(--red)}.btn-out:hover{background:#fff0f0}
+.btn-sm{padding:8px 14px;font-size:.85rem}
+.btn:disabled{background:#ddd;color:#999;border-color:#ddd;cursor:not-allowed}
+.btn-block{width:100%}
+/* header */
+header{position:sticky;top:0;z-index:50;background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.08)}
+.hbar{display:flex;align-items:center;gap:14px;padding:10px 22px;max-width:1300px;margin:auto;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:9px;font-weight:900;font-size:1.3rem;color:var(--red);cursor:pointer;white-space:nowrap}
+.logo .lg{width:38px;height:38px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center;font-size:1.2rem;overflow:hidden}
+.logo img{width:100%;height:100%;object-fit:cover}
+.loc{font-size:.8rem;color:var(--mute);cursor:pointer;line-height:1.2}
+.loc b{color:var(--ink);display:block;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.search{flex:1;min-width:180px;position:relative}
+.search input{border-radius:999px;padding-left:40px;background:var(--cream)}
+.search:before{content:"🔍";position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:.95rem}
+.hr{margin-left:auto;display:flex;align-items:center;gap:12px}
+.user{font-size:.85rem;font-weight:600}
+.cartbtn{display:flex;align-items:center;gap:10px;background:var(--red);color:#fff;padding:9px 16px;border-radius:999px;font-weight:700;position:relative}
+.cartbtn .bd{background:#fff;color:var(--red);min-width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:.78rem;padding:0 4px}
+.chips{background:#fff;border-top:1px solid var(--line);overflow-x:auto;white-space:nowrap}
+.chips div{max-width:1300px;margin:auto;padding:9px 22px;display:flex;gap:9px}
+.chip{padding:7px 16px;border-radius:999px;background:var(--cream);color:var(--ink);font-weight:600;font-size:.88rem;border:1.5px solid var(--line)}
+.chip.on{background:var(--red);color:#fff;border-color:var(--red)}
+/* hero */
+.hero{min-height:420px;display:grid;place-items:center;text-align:center;color:#fff;padding:60px 20px;background:linear-gradient(rgba(60,10,0,.55),rgba(60,10,0,.65)),linear-gradient(135deg,#d62828,#f77f00);background-size:cover;background-position:center}
+.hero h1{font-size:clamp(2rem,6vw,3.8rem);font-weight:900;text-shadow:0 3px 14px rgba(0,0,0,.35)}
+.hero p{font-size:1.15rem;margin:12px 0 26px;opacity:.95}
+.hero .btn{background:#fff;color:var(--red);font-size:1.05rem;padding:14px 32px}
+.wrap{max-width:1300px;margin:auto;padding:0 22px}
+.sec-title{font-size:1.7rem;font-weight:900;margin:36px 0 4px}
+.sec-sub{color:var(--mute);margin-bottom:16px}
+.cats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:16px}
+.cat{background:#fff;border-radius:var(--r);padding:20px 10px;text-align:center;box-shadow:var(--sh);cursor:pointer;transition:.2s;font-weight:700}
+.cat:hover{transform:translateY(-4px)}
+.cat .em{font-size:2.4rem;display:block;margin-bottom:6px}
+.cat img{width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:20px}
+.item{background:var(--card);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);display:flex;flex-direction:column;transition:.2s}
+.item:hover{transform:translateY(-3px)}
+.pic{height:170px;background:linear-gradient(135deg,#ffe3c2,#ffc79a);display:grid;place-items:center;font-size:4.2rem;cursor:pointer;position:relative;overflow:hidden}
+.pic img{width:100%;height:100%;object-fit:cover}
+.item.oos .pic{filter:grayscale(1);opacity:.55}
+.badge{position:absolute;top:10px;left:10px;background:#333;color:#fff;font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:999px}
+.ib{padding:14px;display:flex;flex-direction:column;gap:6px;flex:1}
+.ib h3{font-size:1.05rem;cursor:pointer}
+.price{color:var(--red);font-weight:800}
+.acts{display:flex;gap:8px;margin-top:auto;padding-top:8px}
+.acts .btn{flex:1;padding:9px 6px;font-size:.82rem}
+.unavail{text-align:center;font-size:1.8rem;font-weight:800;color:var(--mute);padding:70px 0}
+footer{background:#2b1d16;color:#f3dfcb;text-align:center;padding:30px 20px;margin-top:50px;font-size:.9rem}
+footer a{color:var(--orange);cursor:pointer}
+/* modal */
+#ov{position:fixed;inset:0;background:rgba(30,12,5,.6);z-index:100;display:none;place-items:center;padding:16px;overflow:auto}
+#ov.show{display:grid}
+.modal{background:#fff;border-radius:22px;width:100%;max-width:460px;padding:26px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.35);animation:pop .22s}
+.modal.wide{max-width:640px}
+@keyframes pop{from{transform:scale(.93);opacity:0}to{transform:none;opacity:1}}
+.x{position:absolute;top:12px;right:14px;background:var(--cream);width:32px;height:32px;border-radius:50%;font-size:1.1rem}
+.modal h2{margin-bottom:6px}
+.tabs{display:flex;gap:6px;margin:10px 0}
+.tabs button{flex:1;padding:9px;border-radius:10px;background:var(--cream);font-weight:700}
+.tabs button.on{background:var(--red);color:#fff}
+.err{color:var(--red);font-size:.85rem;margin-top:8px;min-height:18px}
+.dd{position:relative}
+.dd .cur{padding:11px 13px;border:1.5px solid var(--line);border-radius:12px;cursor:pointer;display:flex;justify-content:space-between;background:#fff}
+.dd .list{display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1.5px solid var(--line);border-radius:12px;max-height:210px;overflow:auto;z-index:5;box-shadow:var(--sh)}
+.dd.open .list{display:block}
+.dd .list div{padding:10px 14px;cursor:pointer}.dd .list div:hover{background:var(--cream)}
+.dtl .pic{height:230px;border-radius:16px;cursor:default;margin-bottom:14px}
+.qty{display:flex;align-items:center;gap:10px}
+.qty button{width:30px;height:30px;border-radius:50%;background:var(--cream);font-weight:800}
+/* cart drawer */
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);background:#fff;z-index:90;transform:translateX(105%);transition:.3s;display:flex;flex-direction:column;box-shadow:-10px 0 40px rgba(0,0,0,.2)}
+#drawer.open{transform:none}
+#drawer .dh{padding:18px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);font-weight:800;font-size:1.2rem}
+#drawer .db{flex:1;overflow:auto;padding:14px 20px}
+#drawer .df{padding:16px 20px;border-top:1px solid var(--line)}
+.ci{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.ci .th{width:54px;height:54px;border-radius:12px;background:#ffe3c2;display:grid;place-items:center;font-size:1.8rem;overflow:hidden;flex:none}
+.ci .th img{width:100%;height:100%;object-fit:cover}
+.ci .in{flex:1;font-size:.92rem}.ci .in b{display:block}
+.row{display:flex;justify-content:space-between;margin:5px 0;font-size:.93rem}
+.row.t{font-weight:900;font-size:1.1rem;border-top:2px dashed var(--line);padding-top:9px;margin-top:9px}
+.empty{text-align:center;color:var(--mute);padding:50px 0}
+.pay label{display:flex;align-items:center;gap:8px;font-size:.95rem;color:var(--ink);font-weight:500;margin:6px 0}
+.pay input{width:auto}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(90px);background:#2b1d16;color:#fff;padding:12px 22px;border-radius:999px;z-index:200;transition:.3s;font-weight:600}
+#toast.show{transform:translateX(-50%)}
+.shade{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:80;display:none}.shade.show{display:block}
+/* admin */
+.adm{max-width:1150px;margin:0 auto;padding:20px}
+.adm .top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.atabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.atabs button{padding:10px 18px;border-radius:999px;background:#fff;font-weight:700;border:1.5px solid var(--line)}
+.atabs button.on{background:var(--red);color:#fff;border-color:var(--red)}
+.panel{background:#fff;border-radius:var(--r);padding:20px;box-shadow:var(--sh);overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--mute);font-size:.78rem;text-transform:uppercase}
+td .th{width:46px;height:46px;border-radius:10px;background:#ffe3c2;display:grid;place-items:center;font-size:1.5rem;overflow:hidden}
+td .th img{width:100%;height:100%;object-fit:cover}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.imgprev{width:90px;height:90px;border-radius:12px;background:#ffe3c2;object-fit:cover;display:grid;place-items:center;font-size:2.3rem;overflow:hidden;margin-top:6px}
+.imgprev img{width:100%;height:100%;object-fit:cover}
+.pill{padding:3px 10px;border-radius:999px;font-size:.75rem;font-weight:700;background:#e5f6ea;color:var(--green)}
+.pill.no{background:#fde4e4;color:var(--red)}
+.hide{display:none!important}
+@media(max-width:700px){.hbar{padding:8px 12px}.search{order:5;flex-basis:100%}.cartbtn .amt{font-size:.85rem}.g2{grid-template-columns:1fr}.loc b{max-width:120px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="ov"></div>
+<div class="shade" id="shade" onclick="toggleCart(false)"></div>
+<div id="drawer"></div>
+<div id="toast"></div>
+
+<script>
+/* ============ DATA LAYER (browser localStorage acts as the database) ============ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => 'Rs. ' + Math.round(n).toLocaleString('en-PK');
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+const DEFAULT_DB = {
+  settings:{brand:'Taste in Train',tagline:'Fresh, hot and delivered at the speed of a train.',logo:'',hero:'',tax:16,delivery:150,freeAbove:3000,adminUser:'admin',adminPass:'admin123',
+    cities:['Peshawar','Lahore','Karachi','Islamabad','Rawalpindi','Faisalabad','Multan','Quetta','Hyderabad','Sialkot','Gujranwala','Abbottabad','Mardan','Bahawalpur']},
+  categories:[
+    {id:'c1',name:'Italian',emoji:'🍕',img:''},{id:'c2',name:'Indian / Desi',emoji:'🍛',img:''},
+    {id:'c3',name:'Chinese',emoji:'🥡',img:''},{id:'c4',name:'Fast Food',emoji:'🍔',img:''},
+    {id:'c5',name:'Desserts',emoji:'🍰',img:''},{id:'c6',name:'Drinks',emoji:'🥤',img:''}],
+  items:[
+    ['c1','Margherita Pizza','Classic hand-stretched dough with tomato sauce, fresh mozzarella and basil. Serves 1-2 (10").',1300,'🍕',1],
+    ['c1','Pepperoni Pizza','Loaded with spicy pepperoni and double cheese on a crispy golden crust. Serves 1-2 (10").',1600,'🍕',1],
+    ['c1','Creamy Alfredo Pasta','Fettuccine tossed in a rich garlic parmesan cream sauce with grilled chicken.',1250,'🍝',1],
+    ['c1','Lasagna','Layers of pasta, beef ragu and béchamel baked with melted cheese.',1450,'🥘',0],
+    ['c2','Chicken Biryani','Aromatic basmati rice slow-cooked with tender chicken, spices and saffron. Served with raita.',650,'🍛',1],
+    ['c2','Butter Chicken','Smoky tandoori chicken in a velvety tomato-butter gravy. Best with naan.',1100,'🍗',1],
+    ['c2','Chicken Karahi','Wok-cooked chicken with tomatoes, green chilies and ginger. Serves 2-3.',1800,'🍲',1],
+    ['c2','Garlic Naan','Soft tandoor-baked bread brushed with garlic butter.',80,'🫓',1],
+    ['c3','Chicken Manchurian','Crispy chicken tossed in a tangy, savory Indo-Chinese sauce.',950,'🥡',1],
+    ['c3','Egg Fried Rice','Wok-fried rice with egg, spring onions and soy. Serves 1-2.',700,'🍚',1],
+    ['c3','Hot & Sour Soup','Peppery, tangy soup with chicken, mushrooms and bamboo shoots.',450,'🍜',0],
+    ['c3','Vegetable Spring Rolls','Six crunchy rolls stuffed with fresh vegetables, with chili dip.',500,'🥟',1],
+    ['c4','Zinger Burger','Crunchy spicy chicken fillet, lettuce and mayo in a toasted bun.',690,'🍔',1],
+    ['c4','Loaded Fries','Golden fries topped with cheese sauce, jalapeños and chicken bits.',560,'🍟',1],
+    ['c4','Club Sandwich','Triple-decker with grilled chicken, egg, cheese and fresh veggies.',720,'🥪',1],
+    ['c4','Chicken Nuggets (10 pcs)','Tender breaded nuggets served with garlic mayo and ketchup.',620,'🍗',1],
+    ['c5','Chocolate Lava Cake','Warm cake with a gooey molten chocolate center.',450,'🍫',1],
+    ['c5','New York Cheesecake','Creamy baked cheesecake on a buttery biscuit base.',550,'🍰',0],
+    ['c5','Kheer','Traditional rice pudding simmered with milk, cardamom and pistachios.',300,'🍮',1],
+    ['c5','Gulab Jamun (4 pcs)','Soft milk dumplings soaked in warm rose-cardamom syrup.',280,'🟤',1],
+    ['c6','Mint Margarita','Refreshing blend of fresh mint, lemon and soda.',280,'🥤',1],
+    ['c6','Mango Shake','Thick and creamy shake made with ripe mangoes.',350,'🥭',1],
+    ['c6','Masala Chai','Strong, spiced milk tea brewed the traditional way.',150,'☕',1],
+    ['c6','Soft Drink (500ml)','Chilled Pepsi, 7Up or Mirinda.',120,'🥫',1]
+  ].map(a=>({id:uid('i'),cat:a[0],name:a[1],desc:a[2],price:a[3],img:'',emoji:a[4],stock:!!a[5]})),
+  users:[], orders:[]
+};
+let db = load('tit_db', null) || JSON.parse(JSON.stringify(DEFAULT_DB));
+let cart = load('tit_cart', []);
+let session = load('tit_session', null);
+let loc = load('tit_loc', null);
+let query = '', pending = null, adminTab = 'items', activeCat = null;
+
+function load(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
+function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){ toast('Storage full: use smaller images'); } }
+const saveDb = () => save('tit_db', db);
+const saveCart = () => save('tit_cart', cart);
+
+/* ============ HELPERS ============ */
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); }
+function openModal(html, wide){ const o=$('#ov'); o.innerHTML=`<div class="modal ${wide?'wide':''}">${html}</div>`; o.classList.add('show'); }
+function closeModal(){ $('#ov').classList.remove('show'); $('#ov').innerHTML=''; }
+$('#ov').addEventListener('mousedown', e => { if(e.target.id==='ov' && (loc || isAdmin())) closeModal(); });
+const thumb = it => it.img ? `<img src="${it.img}" alt="${esc(it.name)}">` : esc(it.emoji || '🍽️');
+const getItem = id => db.items.find(i => i.id === id);
+function totals(){
+  const sub = cart.reduce((s,c)=>{ const it=getItem(c.id); return s + (it ? it.price*c.qty : 0); }, 0);
+  const tax = sub * db.settings.tax / 100;
+  const del = sub === 0 ? 0 : (db.settings.freeAbove > 0 && sub >= db.settings.freeAbove ? 0 : db.settings.delivery);
+  return {sub, tax, del, total: sub + tax + del, count: cart.reduce((s,c)=>s+c.qty,0)};
+}
+const isAdmin = () => sessionStorage.getItem('tit_admin') === '1';
+function fileToDataURL(file, cb){
+  const r = new FileReader();
+  r.onload = e => { const img = new Image(); img.onload = () => {
+    const max = 800, sc = Math.min(1, max/Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = img.width*sc; c.height = img.height*sc;
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); cb(c.toDataURL('image/jpeg', .8)); };
+    img.src = e.target.result; };
+  r.readAsDataURL(file);
+}
+
+/* ============ ROUTER ============ */
+function route(){ document.title = db.settings.brand; location.hash === '#admin' ? renderAdmin() : renderSite(); }
+window.addEventListener('hashchange', () => { toggleCart(false); closeModal(); route(); });
+
+/* ============ CUSTOMER SITE ============ */
+function renderSite(){
+  const s = db.settings;
+  $('#app').innerHTML = `
+  <header>
+    <div class="hbar">
+      <div class="logo" onclick="window.scrollTo({top:0})"><div class="lg">${s.logo?`<img src="${s.logo}">`:'🚆'}</div><span>${esc(s.brand)}</span></div>
+      <div class="loc" onclick="openLocation()">📍 Delivering to<b id="locTxt">${loc?esc(loc.city+', '+loc.address):'Select location'}</b></div>
+      <div class="search"><input id="q" placeholder="Search for food..." value="${esc(query)}" oninput="onSearch(this.value)"></div>
+      <div class="hr">
+        <div class="user">${session?`👤 ${esc(session.name.split(' ')[0])} · <a href="#" onclick="logout();return false" style="color:var(--red)">Logout</a>`:`<button class="btn btn-out btn-sm" onclick="openLogin()">Login</button>`}</div>
+        <button class="cartbtn" onclick="toggleCart(true)">🛒 <span class="bd" id="cBadge">0</span><span class="amt" id="cAmt">Rs. 0</span></button>
+      </div>
+    </div>
+    <div class="chips"><div id="chips"></div></div>
+  </header>
+  <section class="hero" id="hero" style="${s.hero?`background-image:linear-gradient(rgba(60,10,0,.55),rgba(60,10,0,.65)),url('${s.hero}')`:''}">
+    <div><h1>Welcome to ${esc(s.brand)}</h1><p>${esc(s.tagline)}</p><button class="btn" onclick="document.getElementById('menu').scrollIntoView()">View Menu</button></div>
+  </section>
+  <div class="wrap">
+    <div id="catSec"><h2 class="sec-title">What are you craving?</h2><p class="sec-sub">Pick a cuisine to jump straight to it.</p>
+      <div class="cats">${db.categories.map(c=>`<div class="cat" onclick="goCat('${c.id}')">${c.img?`<img src="${c.img}">`:`<span class="em">${esc(c.emoji)}</span>`}${esc(c.name)}</div>`).join('')}</div></div>
+    <div id="menu"></div>
+  </div>
+  <footer>© ${new Date().getFullYear()} ${esc(s.brand)} · Made with ♥ in Pakistan · <a href="#admin">Owner login</a></footer>`;
+  renderMenu(); renderCartUI();
+  if(!loc) openLocation(true);
+}
+function renderMenu(){
+  const q = query.trim().toLowerCase();
+  const cats = db.categories.filter(c => db.items.some(i => i.cat === c.id));
+  $('#chips').innerHTML = cats.map(c=>`<button class="chip ${activeCat===c.id?'on':''}" data-c="${c.id}" onclick="goCat('${c.id}')">${esc(c.emoji)} ${esc(c.name)}</button>`).join('');
+  let html = '', found = 0;
+  db.categories.forEach(c => {
+    const list = db.items.filter(i => i.cat === c.id && (!q || i.name.toLowerCase().includes(q)));
+    if(!list.length) return; found += list.length;
+    html += `<section class="msec" id="cat-${c.id}" data-c="${c.id}"><h2 class="sec-title">${esc(c.emoji)} ${esc(c.name)}</h2><p class="sec-sub">${list.length} item${list.length>1?'s':''}</p><div class="grid">${list.map(itemCard).join('')}</div></section>`;
+  });
+  $('#menu').innerHTML = found ? html : `<div class="unavail">Unavailable</div>`;
+  $('#catSec').classList.toggle('hide', !!q);
+  spy();
+}
+function itemCard(it){
+  return `<div class="item ${it.stock?'':'oos'}">
+    <div class="pic" onclick="openItem('${it.id}')">${thumb(it)}${it.stock?'':'<span class="badge">Out of Stock</span>'}</div>
+    <div class="ib"><h3 onclick="openItem('${it.id}')">${esc(it.name)}</h3><div class="price">${money(it.price)}</div>
+      <div class="acts"><button class="btn btn-out" ${it.stock?'':'disabled'} onclick="addToCart('${it.id}')">Add to Cart</button><button class="btn btn-red" ${it.stock?'':'disabled'} onclick="orderNow('${it.id}')">Order Now</button></div></div></div>`;
+}
+function onSearch(v){ query = v; renderMenu(); }
+function goCat(id){ if(query){ query=''; const q=$('#q'); if(q) q.value=''; renderMenu(); } const el=$('#cat-'+id); if(el){ el.scrollIntoView(); } }
+function spy(){
+  const secs = [...document.querySelectorAll('.msec')]; if(!secs.length) return;
+  let cur = secs[0].dataset.c;
+  secs.forEach(s => { if(s.getBoundingClientRect().top <= 170) cur = s.dataset.c; });
+  if(cur !== activeCat){ activeCat = cur; document.querySelectorAll('.chip').forEach(ch => {
+    const on = ch.dataset.c === cur; ch.classList.toggle('on', on);
+    if(on){ const bar = ch.parentElement.parentElement; bar.scrollTo({left: ch.offsetLeft - bar.clientWidth/2 + ch.offsetWidth/2, behavior:'auto'}); } }); }
+}
+let _tick = false;
+window.addEventListener('scroll', () => {
+  if(location.hash === '#admin' || _tick) return; _tick = true;
+  requestAnimationFrame(() => { spy(); _tick = false; });
+}, {passive:true});
+
+/* ---- item details ---- */
+function openItem(id){
+  const it = getItem(id); if(!it) return; const cat = db.categories.find(c=>c.id===it.cat);
+  openModal(`<button class="x" onclick="closeModal()">✕</button><div class="dtl">
+    <div class="pic">${thumb(it)}${it.stock?'':'<span class="badge">Out of Stock</span>'}</div>
+    <small style="color:var(--mute)">${cat?esc(cat.name):''}</small><h2>${esc(it.name)}</h2>
+    <p style="color:var(--mute);margin:6px 0 12px">${esc(it.desc)}</p><div class="price" style="font-size:1.4rem">${money(it.price)}</div>
+    <div class="qty" style="margin:14px 0"><button onclick="dq(-1)">−</button><b id="dqty">1</b><button onclick="dq(1)">+</button></div>
+    <div class="acts"><button class="btn btn-out" ${it.stock?'':'disabled'} onclick="addToCart('${it.id}',+$('#dqty').textContent,true)">Add to Cart</button>
+    <button class="btn btn-red" ${it.stock?'':'disabled'} onclick="orderNow('${it.id}',+$('#dqty').textContent)">Order Now</button></div></div>`);
+}
+function dq(d){ const e=$('#dqty'); e.textContent = Math.max(1, +e.textContent + d); }
+
+/* ---- location ---- */
+function openLocation(force){
+  const cities = db.settings.cities;
+  openModal(`${force?'':'<button class="x" onclick="closeModal()">✕</button>'}<div style="font-size:2.4rem">📍</div><h2>Where should we deliver?</h2>
+    <p style="color:var(--mute)">Choose your city and enter your address to see what's available.</p>
+    <label>City</label>
+    <div class="dd" id="dd"><div class="cur" onclick="$('#dd').classList.toggle('open')"><span id="ddv">${loc?esc(loc.city):'Select City:'}</span><span>▾</span></div>
+      <div class="list">${cities.map(c=>`<div onclick="pickCity('${esc(c)}')">${esc(c)}</div>`).join('')}</div></div>
+    <label>Full address</label><textarea id="addr" rows="2" placeholder="House #, street, area, landmark">${loc?esc(loc.address):''}</textarea>
+    <div class="err" id="lerr"></div><button class="btn btn-red btn-block" onclick="saveLoc()">Confirm Location</button>`);
+  window._city = loc ? loc.city : '';
+}
+function pickCity(c){ window._city = c; $('#ddv').textContent = c; $('#dd').classList.remove('open'); }
+function saveLoc(){
+  const a = $('#addr').value.trim();
+  if(!window._city) return $('#lerr').textContent = 'Please select a city.';
+  if(a.length < 5) return $('#lerr').textContent = 'Please enter your full address.';
+  loc = {city: window._city, address: a}; save('tit_loc', loc); closeModal(); renderSite();
+}
+
+/* ---- auth ---- */
+function openLogin(tab='login', msg=''){
+  openModal(`<button class="x" onclick="pending=null;closeModal()">✕</button><h2>${tab==='login'?'Welcome back':'Create account'}</h2>
+    <p style="color:var(--mute)">${msg||'Log in to place your order.'}</p>
+    <div class="tabs"><button class="${tab==='login'?'on':''}" onclick="openLogin('login','${msg}')">Login</button><button class="${tab==='signup'?'on':''}" onclick="openLogin('signup','${msg}')">Sign up</button></div>
+    ${tab==='signup'?`<label>Full name</label><input id="aName" placeholder="Your name">`:''}
+    <label>Email or phone</label><input id="aId" placeholder="you@email.com / 03xx-xxxxxxx">
+    <label>Password</label><input id="aPw" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doAuth('${tab}')">
+    <div class="err" id="aerr"></div>
+    <button class="btn btn-red btn-block" onclick="doAuth('${tab}')">${tab==='login'?'Login':'Sign up'}</button>
+    ${tab==='login'?`<p style="text-align:center;margin-top:12px;font-size:.85rem"><a href="#" onclick="toast('Password reset: contact the restaurant');return false" style="color:var(--red)">Forgot password?</a></p>`:''}`);
+}
+function doAuth(tab){
+  const id = $('#aId').value.trim().toLowerCase(), pw = $('#aPw').value, err = m => $('#aerr').textContent = m;
+  if(!id || !pw) return err('Please fill in all fields.');
+  if(tab === 'signup'){
+    const name = $('#aName').value.trim(); if(!name) return err('Please enter your name.');
+    if(pw.length < 6) return err('Password must be at least 6 characters.');
+    if(db.users.some(u => u.id === id)) return err('An account with this email/phone already exists.');
+    db.users.push({id, name, pw: btoa(unescape(encodeURIComponent(pw)))}); saveDb(); session = {id, name};
+  } else {
+    const u = db.users.find(u => u.id === id && u.pw === btoa(unescape(encodeURIComponent(pw))));
+    if(!u) return err('Incorrect email/phone or password.'); session = {id: u.id, name: u.name};
+  }
+  save('tit_session', session); closeModal(); renderSite(); toast('Logged in as ' + session.name);
+  if(pending){ const p = pending; pending = null; p(); }
+}
+function logout(){ session = null; localStorage.removeItem('tit_session'); renderSite(); toast('Logged out'); }
+function needLogin(fn){ if(session) return true; pending = fn; openLogin('login', 'Please log in first to order.'); return false; }
+
+/* ---- cart ---- */
+function addToCart(id, qty=1, fromModal){
+  if(!needLogin(()=>addToCart(id, qty, fromModal))) return;
+  const it = getItem(id); if(!it || !it.stock) return;
+  const c = cart.find(c => c.id === id); c ? c.qty += qty : cart.push({id, qty}); saveCart();
+  if(fromModal) closeModal(); renderCartUI(); toast(`${it.name} added to cart`);
+}
+function orderNow(id, qty=1){
+  if(!needLogin(()=>orderNow(id, qty))) return;
+  const it = getItem(id); if(!it || !it.stock) return;
+  const c = cart.find(c => c.id === id); c ? c.qty = Math.max(c.qty, qty) : cart.push({id, qty}); saveCart();
+  closeModal(); renderCartUI(); openCheckout();
+}
+function chg(id, d){ const c = cart.find(c => c.id === id); if(!c) return; c.qty += d; if(c.qty <= 0) cart = cart.filter(x => x.id !== id); saveCart(); renderCartUI(); }
+function rm(id){ cart = cart.filter(x => x.id !== id); saveCart(); renderCartUI(); }
+function toggleCart(open){ $('#drawer').classList.toggle('open', open); $('#shade').classList.toggle('show', open); }
+function renderCartUI(){
+  cart = cart.filter(c => getItem(c.id)); const t = totals();
+  const b = $('#cBadge'); if(b){ b.textContent = t.count; $('#cAmt').textContent = money(t.total); }
+  $('#drawer').innerHTML = `<div class="dh"><span>🛒 Your Cart</span><button class="x" style="position:static" onclick="toggleCart(false)">✕</button></div>
+  <div class="db">${cart.length ? cart.map(c=>{ const it=getItem(c.id); return `<div class="ci"><div class="th">${thumb(it)}</div>
+    <div class="in"><b>${esc(it.name)}</b>${money(it.price)}<div class="qty" style="margin-top:4px"><button onclick="chg('${it.id}',-1)">−</button><b>${c.qty}</b><button onclick="chg('${it.id}',1)">+</button></div></div>
+    <div style="text-align:right"><b>${money(it.price*c.qty)}</b><br><button onclick="rm('${it.id}')" style="background:none;color:var(--red);font-size:.8rem">Remove</button></div></div>`}).join('') : '<div class="empty"><div style="font-size:3rem">🛒</div>Your cart is empty.<br>Add something tasty!</div>'}</div>
+  ${cart.length?`<div class="df"><div class="row"><span>Subtotal</span><span>${money(t.sub)}</span></div>
+    <div class="row"><span>Tax (${db.settings.tax}%)</span><span>${money(t.tax)}</span></div>
+    <div class="row"><span>Delivery</span><span>${t.del?money(t.del):'FREE'}</span></div>
+    <div class="row t"><span>Total</span><span>${money(t.total)}</span></div>
+    <button class="btn btn-red btn-block" style="margin-top:12px" onclick="openCheckout()">Proceed to Checkout</button></div>`:''}`;
+}
+
+/* ---- checkout ---- */
+function openCheckout(){
+  if(!cart.length) return toast('Your cart is empty');
+  if(!needLogin(openCheckout)) return; toggleCart(false); const t = totals();
+  openModal(`<button class="x" onclick="closeModal()">✕</button><h2>Checkout</h2>
+    <label>Delivering to</label><div style="background:var(--cream);padding:11px 13px;border-radius:12px;font-size:.92rem">📍 ${esc(loc.city)}, ${esc(loc.address)} <a href="#" onclick="openLocation();return false" style="color:var(--red);margin-left:6px">Change</a></div>
+    <label>Contact phone</label><input id="cPhone" placeholder="03xx-xxxxxxx">
+    <label>Payment method</label><div class="pay"><label><input type="radio" name="pm" value="Cash on Delivery" checked> Cash on Delivery</label>
+    <label><input type="radio" name="pm" value="Card"> Debit / Credit Card</label><label><input type="radio" name="pm" value="JazzCash"> JazzCash</label><label><input type="radio" name="pm" value="Easypaisa"> Easypaisa</label></div>
+    <div style="margin-top:12px"><div class="row"><span>Subtotal</span><span>${money(t.sub)}</span></div><div class="row"><span>Tax (${db.settings.tax}%)</span><span>${money(t.tax)}</span></div>
+    <div class="row"><span>Delivery</span><span>${t.del?money(t.del):'FREE'}</span></div><div class="row t"><span>Total</span><span>${money(t.total)}</span></div></div>
+    <div class="err" id="cerr"></div><button class="btn btn-red btn-block" onclick="placeOrder()">Place Order</button>`);
+}
+function placeOrder(){
+  const phone = $('#cPhone').value.trim(); if(phone.length < 7) return $('#cerr').textContent = 'Please enter a valid phone number.';
+  const pm = document.querySelector('input[name=pm]:checked').value, t = totals();
+  const order = {id:'TIT-' + String(1000 + db.orders.length + 1), user:session.name, userId:session.id, phone, address:`${loc.city}, ${loc.address}`, payment:pm,
+    items:cart.map(c=>{ const it=getItem(c.id); return {name:it.name, qty:c.qty, price:it.price}; }), sub:t.sub, tax:t.tax, del:t.del, total:t.total, status:'Pending', date:new Date().toLocaleString('en-PK')};
+  db.orders.unshift(order); saveDb(); cart = []; saveCart(); renderCartUI();
+  openModal(`<div style="text-align:center"><div style="font-size:3.5rem">🎉</div><h2>Order placed!</h2><p style="color:var(--mute);margin:8px 0">Thank you, ${esc(session.name.split(' ')[0])}. Your food is being prepared.</p>
+    <div style="background:var(--cream);border-radius:14px;padding:14px;margin:14px 0"><small>Order number</small><div style="font-size:1.5rem;font-weight:900;color:var(--red)">${order.id}</div><div>Total: <b>${money(order.total)}</b> · ${esc(pm)}</div></div>
+    <button class="btn btn-red btn-block" onclick="closeModal()">Continue browsing</button></div>`);
+}
+
+/* ============ ADMIN PANEL ============ */
+function renderAdmin(){
+  if(!isAdmin()){
+    $('#app').innerHTML = `<div style="min-height:100vh;display:grid;place-items:center;padding:20px"><div class="modal" style="animation:none"><h2>🔐 Owner Login</h2>
+      <p style="color:var(--mute)">Sign in to manage your website.</p><label>Username</label><input id="au"><label>Password</label><input id="ap" type="password" onkeydown="if(event.key==='Enter')adminLogin()">
+      <div class="err" id="aerr2"></div><button class="btn btn-red btn-block" onclick="adminLogin()">Login</button>
+      <p style="text-align:center;margin-top:12px;font-size:.85rem"><a href="#" onclick="location.hash='';return false" style="color:var(--red)">← Back to website</a></p>
+      <p style="text-align:center;margin-top:8px;font-size:.75rem;color:var(--mute)">Default: admin / admin123 (change it in Settings)</p></div></div>`;
+    return;
+  }
+  const tabs = {items:'🍽️ Menu Items', categories:'🗂️ Categories', orders:`📦 Orders (${db.orders.filter(o=>o.status==='Pending').length})`, settings:'⚙️ Settings'};
+  $('#app').innerHTML = `<div class="adm"><div class="top"><h1>${esc(db.settings.brand)} · Admin</h1><div><button class="btn btn-out btn-sm" onclick="location.hash=''">View website</button> <button class="btn btn-red btn-sm" onclick="sessionStorage.removeItem('tit_admin');renderAdmin()">Logout</button></div></div>
+    <div class="atabs">${Object.entries(tabs).map(([k,v])=>`<button class="${adminTab===k?'on':''}" onclick="adminTab='${k}';renderAdmin()">${v}</button>`).join('')}</div>
+    <div class="panel" id="apanel"></div></div>`;
+  ({items:adminItems, categories:adminCats, orders:adminOrders, settings:adminSettings})[adminTab]();
+}
+function adminLogin(){
+  if($('#au').value.trim() === db.settings.adminUser && $('#ap').value === db.settings.adminPass){ sessionStorage.setItem('tit_admin','1'); renderAdmin(); }
+  else $('#aerr2').textContent = 'Wrong username or password.';
+}
+function adminItems(){
+  $('#apanel').innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:12px"><b>${db.items.length} items</b><button class="btn btn-red btn-sm" onclick="editItem()">+ Add item</button></div>
+  <table><tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th></th></tr>${db.items.map(it=>{ const c=db.categories.find(c=>c.id===it.cat);
+    return `<tr><td><div class="th">${thumb(it)}</div></td><td><b>${esc(it.name)}</b></td><td>${c?esc(c.name):'—'}</td><td>${money(it.price)}</td>
+    <td><span class="pill ${it.stock?'':'no'}">${it.stock?'Available':'Out of stock'}</span> <button class="btn btn-out btn-sm" onclick="toggleStock('${it.id}')">Toggle</button></td>
+    <td style="white-space:nowrap"><button class="btn btn-out btn-sm" onclick="editItem('${it.id}')">Edit</button> <button class="btn btn-sm" style="background:#fde4e4;color:var(--red)" onclick="delItem('${it.id}')">Delete</button></td></tr>`}).join('')}</table>`;
+}
+function toggleStock(id){ const it=getItem(id); it.stock=!it.stock; saveDb(); renderAdmin(); }
+function delItem(id){ if(!confirm('Delete this item?')) return; db.items = db.items.filter(i=>i.id!==id); cart = cart.filter(c=>c.id!==id); saveCart(); saveDb(); renderAdmin(); }
+function editItem(id){
+  const it = id ? getItem(id) : {name:'',desc:'',price:'',cat:db.categories[0]?.id,img:'',emoji:'🍽️',stock:true}; window._img = it.img;
+  openModal(`<button class="x" onclick="closeModal()">✕</button><h2>${id?'Edit':'Add'} item</h2>
+    <label>Name</label><input id="fn" value="${esc(it.name)}"><label>Description</label><textarea id="fd" rows="3">${esc(it.desc)}</textarea>
+    <div class="g2"><div><label>Price (PKR)</label><input id="fp" type="number" min="0" value="${it.price}"></div>
+    <div><label>Category</label><select id="fc">${db.categories.map(c=>`<option value="${c.id}" ${c.id===it.cat?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+    <div><label>Emoji (if no photo)</label><input id="fe" value="${esc(it.emoji)}"></div>
+    <div><label>Status</label><select id="fs"><option value="1" ${it.stock?'selected':''}>Available</option><option value="0" ${it.stock?'':'selected'}>Out of stock</option></select></div></div>
+    <label>Picture</label><input type="file" accept="image/*" onchange="fileToDataURL(this.files[0],d=>{window._img=d;$('#fprev').innerHTML='<img src=\\''+d+'\\'>'})">
+    <div class="imgprev" id="fprev">${it.img?`<img src="${it.img}">`:esc(it.emoji)}</div>
+    <div class="err" id="ferr"></div><button class="btn btn-red btn-block" onclick="saveItem('${id||''}')">Save item</button>`, true);
+}
+function saveItem(id){
+  const name=$('#fn').value.trim(), price=+$('#fp').value; if(!name || !(price >= 0) || $('#fp').value==='') return $('#ferr').textContent='Name and price are required.';
+  const o = {name, desc:$('#fd').value.trim(), price, cat:$('#fc').value, emoji:$('#fe').value||'🍽️', stock:$('#fs').value==='1', img:window._img||''};
+  if(id) Object.assign(getItem(id), o); else db.items.push({id:uid('i'), ...o}); saveDb(); closeModal(); renderAdmin(); toast('Saved');
+}
+function adminCats(){
+  $('#apanel').innerHTML = `<div style="display:flex;justify-content:space-between;margin-bottom:12px"><b>${db.categories.length} categories</b><button class="btn btn-red btn-sm" onclick="editCat()">+ Add category</button></div>
+  <table><tr><th></th><th>Name</th><th>Items</th><th>Order</th><th></th></tr>${db.categories.map((c,i)=>`<tr><td><div class="th">${c.img?`<img src="${c.img}">`:esc(c.emoji)}</div></td><td><b>${esc(c.name)}</b></td><td>${db.items.filter(x=>x.cat===c.id).length}</td>
+    <td><button class="btn btn-out btn-sm" onclick="moveCat(${i},-1)">↑</button> <button class="btn btn-out btn-sm" onclick="moveCat(${i},1)">↓</button></td>
+    <td style="white-space:nowrap"><button class="btn btn-out btn-sm" onclick="editCat('${c.id}')">Edit</button> <button class="btn btn-sm" style="background:#fde4e4;color:var(--red)" onclick="delCat('${c.id}')">Delete</button></td></tr>`).join('')}</table>`;
+}
+function moveCat(i,d){ const j=i+d; if(j<0||j>=db.categories.length) return; [db.categories[i],db.categories[j]]=[db.categories[j],db.categories[i]]; saveDb(); renderAdmin(); }
+function delCat(id){ const n=db.items.filter(i=>i.cat===id).length; if(!confirm(n?`This also deletes its ${n} item(s). Continue?`:'Delete this category?')) return;
+  db.items.filter(i=>i.cat===id).forEach(i=>{cart=cart.filter(c=>c.id!==i.id)}); db.items=db.items.filter(i=>i.cat!==id); db.categories=db.categories.filter(c=>c.id!==id); saveCart(); saveDb(); renderAdmin(); }
+function editCat(id){
+  const c = id ? db.categories.find(c=>c.id===id) : {name:'',emoji:'🍽️',img:''}; window._img = c.img;
+  openModal(`<button class="x" onclick="closeModal()">✕</button><h2>${id?'Edit':'Add'} category</h2><label>Name</label><input id="cn" value="${esc(c.name)}">
+    <label>Emoji</label><input id="ce" value="${esc(c.emoji)}"><label>Picture (optional)</label>
+    <input type="file" accept="image/*" onchange="fileToDataURL(this.files[0],d=>{window._img=d;$('#cprev').innerHTML='<img src=\\''+d+'\\'>'})"><div class="imgprev" id="cprev">${c.img?`<img src="${c.img}">`:esc(c.emoji)}</div>
+    <div class="err" id="cerr2"></div><button class="btn btn-red btn-block" onclick="saveCat('${id||''}')">Save</button>`);
+}
+function saveCat(id){
+  const name=$('#cn').value.trim(); if(!name) return $('#cerr2').textContent='Name is required.';
+  const o={name, emoji:$('#ce').value||'🍽️', img:window._img||''}; if(id) Object.assign(db.categories.find(c=>c.id===id), o); else db.categories.push({id:uid('c'), ...o});
+  saveDb(); closeModal(); renderAdmin();
+}
+function adminOrders(){
+  const st = ['Pending','Preparing','Out for Delivery','Delivered','Cancelled'];
+  $('#apanel').innerHTML = db.orders.length ? `<table><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th></tr>${db.orders.map(o=>`<tr><td><b>${o.id}</b><br><small>${esc(o.date)}</small></td>
+    <td>${esc(o.user)}<br><small>${esc(o.phone)}<br>${esc(o.address)}</small></td><td><small>${o.items.map(i=>`${i.qty}× ${esc(i.name)}`).join('<br>')}</small></td>
+    <td><b>${money(o.total)}</b><br><small>${esc(o.payment)}</small></td><td><select onchange="setStatus('${o.id}',this.value)">${st.map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select></td></tr>`).join('')}</table>` : '<div class="empty">No orders yet.</div>';
+}
+function setStatus(id, s){ db.orders.find(o=>o.id===id).status = s; saveDb(); toast('Order updated'); }
+function adminSettings(){
+  const s = db.settings;
+  $('#apanel').innerHTML = `<div class="g2"><div><label>Brand name</label><input id="sb" value="${esc(s.brand)}"></div><div><label>Tagline</label><input id="st" value="${esc(s.tagline)}"></div>
+    <div><label>Tax (%)</label><input id="sx" type="number" min="0" value="${s.tax}"></div><div><label>Delivery charges (PKR)</label><input id="sd" type="number" min="0" value="${s.delivery}"></div>
+    <div><label>Free delivery above (PKR, 0 = never)</label><input id="sf" type="number" min="0" value="${s.freeAbove}"></div><div></div>
+    <div><label>Logo</label><input type="file" accept="image/*" onchange="fileToDataURL(this.files[0],d=>{db.settings.logo=d;saveDb();toast('Logo updated');adminSettings()})"><div class="imgprev">${s.logo?`<img src="${s.logo}">`:'🚆'}</div>
+      ${s.logo?`<button class="btn btn-out btn-sm" style="margin-top:6px" onclick="db.settings.logo='';saveDb();adminSettings()">Remove</button>`:''}</div>
+    <div><label>Hero banner image</label><input type="file" accept="image/*" onchange="fileToDataURL(this.files[0],d=>{db.settings.hero=d;saveDb();toast('Banner updated');adminSettings()})"><div class="imgprev">${s.hero?`<img src="${s.hero}">`:'🖼️'}</div>
+      ${s.hero?`<button class="btn btn-out btn-sm" style="margin-top:6px" onclick="db.settings.hero='';saveDb();adminSettings()">Remove</button>`:''}</div></div>
+    <label>Delivery cities (one per line)</label><textarea id="sc" rows="6">${esc(s.cities.join('\n'))}</textarea>
+    <div class="g2"><div><label>Admin username</label><input id="su" value="${esc(s.adminUser)}"></div><div><label>Admin password</label><input id="sp" type="text" value="${esc(s.adminPass)}"></div></div>
+    <button class="btn btn-red" style="margin-top:16px" onclick="saveSettings()">Save settings</button>
+    <hr style="margin:22px 0;border:0;border-top:1px solid var(--line)"><button class="btn btn-sm" style="background:#fde4e4;color:var(--red)" onclick="if(confirm('Reset EVERYTHING (menu, orders, users) to defaults?')){localStorage.clear();location.reload()}">Reset all data</button>`;
+}
+function saveSettings(){
+  const s = db.settings; s.brand=$('#sb').value.trim()||s.brand; s.tagline=$('#st').value.trim(); s.tax=+$('#sx').value||0; s.delivery=+$('#sd').value||0; s.freeAbove=+$('#sf').value||0;
+  s.cities=$('#sc').value.split('\n').map(x=>x.trim()).filter(Boolean); s.adminUser=$('#su').value.trim()||'admin'; s.adminPass=$('#sp').value||'admin123';
+  saveDb(); document.title=s.brand; toast('Settings saved'); renderAdmin();
+}
+
+route();
+</script>
+</body>
+</html>
